@@ -411,6 +411,20 @@ export const learningRouter = createTRPCRouter({
         })
         .where(eq(schema.page.id, input.id));
     }),
+  removeImageFromCourse: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db
+        .update(schema.course)
+        .set({
+          image: "",
+        })
+        .where(eq(schema.course.id, input.id));
+    }),
   deleteChapter: adminProcedure
     .input(
       z.object({

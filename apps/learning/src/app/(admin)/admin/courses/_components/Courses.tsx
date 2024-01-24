@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { MoreVertical } from "lucide-react";
 
@@ -17,10 +18,6 @@ import { api } from "~/trpc/react";
 
 export function Courses(props: { courses: RouterOutputs["learning"]["all"] }) {
   const router = useRouter();
-
-  const handleStartCourse = (id: string) => {
-    router.push(`/course/${id}`);
-  };
 
   return (
     <div className="flex justify-center">
@@ -41,7 +38,17 @@ export function Courses(props: { courses: RouterOutputs["learning"]["all"] }) {
                 {" "}
                 {/* Add shadow and hover effect */}
                 <CardContent>
-                  <div className="aspect-[16/9] w-full bg-gray-200"></div>
+                  {course.image ? (
+                    <Image
+                      src={course.image}
+                      alt={course.name}
+                      width={600}
+                      height={400}
+                      className="rounded-md"
+                    />
+                  ) : (
+                    <div className="aspect-[16/9] w-full bg-gray-200" />
+                  )}
                   {/* Add a background color for the aspect ratio placeholder */}
                   <h3 className="mt-4 text-lg font-semibold">{course.name}</h3>
 

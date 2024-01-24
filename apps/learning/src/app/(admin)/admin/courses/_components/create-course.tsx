@@ -6,7 +6,6 @@
 
 import React, { useState } from "react";
 import { Pen } from "lucide-react";
-import * as z from "zod";
 
 import type { RouterOutputs } from "@acme/api";
 
@@ -14,12 +13,8 @@ import { Button } from "~/components/ui/button";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
 import { ChapterEditor } from "./chapter-editor";
+import { CourseDetails } from "./CourseInfo";
 import { Sessions } from "./sessions-bar";
-
-const quizSchema = z.object({
-  question: z.string().min(1),
-  answer: z.string().min(1),
-});
 
 export function CreateCourseForm(props: {
   course: RouterOutputs["learning"]["byId"];
@@ -53,6 +48,10 @@ export function CreateCourseForm(props: {
     },
   });
 
+  if (!props.course) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen w-full bg-gray-100 dark:bg-gray-800">
       <header className="flex items-center justify-between bg-white p-6 dark:bg-gray-900">
@@ -62,12 +61,14 @@ export function CreateCourseForm(props: {
             className="text-2xl font-bold"
             defaultValue={courseName}
             onBlur={(e) => {
-              void renameCourse({
-                id: props.course.id,
-                name: e.target.value,
-              });
-              setCourseName(e.target.value);
-              setEditCourseTitle(false);
+              if (props.course) {
+                void renameCourse({
+                  id: props.course.id,
+                  name: e.target.value,
+                });
+                setCourseName(e.target.value);
+                setEditCourseTitle(false);
+              }
             }}
           />
         ) : (
@@ -82,19 +83,21 @@ export function CreateCourseForm(props: {
         <Button variant="outline">Save Changes</Button>
       </header>
       <main className="flex flex-col justify-center gap-6 p-6 lg:flex-row">
-        {" "}
-        {/* Modified here */}
         <div className="w-full lg:w-2/3">
           <ChapterEditor
-            lessonId={activeChapter?.id}
-            courseId={props.course?.id}
+            lessonId={activeChapter?.id ?? ""}
+            courseId={props.course?.id ?? ""}
           />
         </div>
-        <div className="w-full lg:w-1/3">
+        <div className="flex w-full flex-col gap-4 lg:w-1/3">
+          {" "}
+          {/* Adjusted this line */}
+          {/* Removed the inner div, as it's unnecessary now */}
           <Sessions
             courseId={props.course?.id}
             setActiveChapter={setActiveChapter}
           />
+          <CourseDetails courseId={props.course.id} />
         </div>
       </main>
     </div>

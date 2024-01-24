@@ -83,7 +83,9 @@ export function VideoPreview({
   };
 
   const { getRootProps, getInputProps } = useDropzone({
-    onDrop,
+    onDrop: (acceptedFiles) => {
+      onDrop(acceptedFiles).catch(console.error);
+    },
   });
 
   return (
@@ -91,7 +93,10 @@ export function VideoPreview({
       {videoFile ?? videoUri ? (
         <div className="bottom-5 flex flex-col items-end">
           <Button onClick={onDeleteVideo}>Delete Video</Button>
-          <MediaPlayer title="Video Preview" src={videoUri ?? videoFile}>
+          <MediaPlayer
+            title="Video Preview"
+            src={videoUri ?? videoFile ?? undefined}
+          >
             <MediaProvider />
             <DefaultVideoLayout thumbnails="none" icons={defaultLayoutIcons} />
           </MediaPlayer>

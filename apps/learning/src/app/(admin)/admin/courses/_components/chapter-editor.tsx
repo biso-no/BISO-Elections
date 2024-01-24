@@ -1,20 +1,16 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pen, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-
-import type { RouterOutputs } from "@acme/api";
 
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
   Form,
-  FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -160,7 +156,7 @@ export function ChapterEditor({ lessonId, courseId }: Props) {
                 <VideoPreview
                   chapterId={chapter.id}
                   courseId={courseId}
-                  videoUri={chapter.video}
+                  videoUri={chapter.video ?? undefined}
                 />
               </div>
             </TabsContent>
