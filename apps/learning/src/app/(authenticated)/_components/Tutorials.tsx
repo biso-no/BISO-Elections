@@ -7,12 +7,15 @@ import type { RouterOutputs } from "@acme/api";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Progress } from "~/components/ui/progress";
+import { api } from "~/trpc/react";
 
 //A dynamic alternative to the Tutorials component below
 export function Tutorials(props: {
   courses: RouterOutputs["learning"]["allCourses"];
 }) {
   const router = useRouter();
+
+  const utils = api.useUtils();
 
   const handleStartCourse = (id: string) => {
     router.push(`/course/${id}`);

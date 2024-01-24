@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ListFilter } from "lucide-react";
+import { useDebouncedCallback } from "use-debounce";
 
 import { ComboBox } from "~/components/combo-box";
 import { Button } from "~/components/ui/button";
@@ -161,52 +162,52 @@ const types: FilterOption[] = [
 
 export function Filter() {
   const searchParams = useSearchParams();
+  const { replace } = useRouter();
+  const pathname = usePathname();
 
-  const [campus, setCampus] = useState<string>("all");
-  const [topic, setTopic] = useState<string>("all");
-  const [subject, setSubject] = useState<string>("all");
-  const [level, setLevel] = useState<string>("all");
-  const [language, setLanguage] = useState<string>("all");
-  const [type, setType] = useState<string>("all");
-  const [search, setSearch] = useState<string>("");
   const [tempSearch, setTempSearch] = useState<string>("");
   const [allFilters, setAllFilters] = useState<boolean>(false);
 
-  const updateSearchParams = useCallback(() => {
-    const existingParams = new URLSearchParams(window.location.search);
-
-    if (campus !== "all") existingParams.set("campus", campus);
-    if (topic !== "all") existingParams.set("topic", topic);
-    if (subject !== "all") existingParams.set("subject", subject);
-    if (level !== "all") existingParams.set("level", level);
-    if (language !== "all") existingParams.set("language", language);
-    if (type !== "all") existingParams.set("type", type);
-    if (search !== "") existingParams.set("search", search);
-
-    return existingParams.toString();
-  }, [campus, topic, subject, level, language, type, search]);
-
   //Clear params. DO NOT USE useCallback
   const clearParams = () => {
-    setCampus("all");
-    setTopic("all");
-    setSubject("all");
-    setLevel("all");
-    setLanguage("all");
-    setType("all");
-    setSearch("");
+    //Remove all params, except for the sortOrder and sortType, as they are searchParams used in another component.
+    const params = new URLSearchParams(searchParams);
+    params.delete("campus");
+    params.delete("topic");
+    params.delete("subject");
+    params.delete("level");
+    params.delete("language");
+    params.delete("type");
+    params.delete("search");
+    replace(`${pathname}?${params.toString()}`);
   };
-
-  // Update search params whenever the component state changes
-  useEffect(() => {
-    const updatedParams = updateSearchParams();
-    window.history.replaceState({}, "", `?${updatedParams}`);
-  }, [updateSearchParams]);
 
   const toggleAllFilters = useCallback(() => {
     setAllFilters(!allFilters);
   }, [allFilters]);
 
+  //Handle search
+  const handleSearch = useDebouncedCallback((value: string) => {
+    const params = new URLSearchParams(searchParams);
+    //Update the search param in case there are other filters
+    if (value) {
+      params.set("search", value);
+    } else {
+      params.delete("search");
+    }
+    replace(`${pathname}?${params.toString()}`);
+  }, 300);
+
+  //Handle filters
+  const handleFilter = (value: string, filter: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) {
+      params.set(filter, value);
+    } else {
+      params.delete(filter);
+    }
+    replace(`${pathname}?${params.toString()}`);
+  };
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-row gap-4">
@@ -215,14 +216,11 @@ export function Filter() {
           <ComboBox
             options={topics}
             variant="ghost"
-            label={topic === "all" ? "All Topics" : topic}
+            label={searchParams.get("topic")?.toString() ?? "All Categories"}
             onChange={(value) => {
-              if (searchParams.get("search")) {
-                setSearch(searchParams.get("search"));
-              }
-              setTopic(value);
+              handleFilter(value, "topic");
             }}
-            key={topic}
+            key="topic"
           />
         </div>
         <div className="flex flex-shrink-0 flex-grow-0 flex-col gap-2">
@@ -230,14 +228,11 @@ export function Filter() {
           <ComboBox
             options={subjects}
             variant="ghost"
-            label={subject === "all" ? "All Subjects" : subject}
+            label={searchParams.get("subject")?.toString() ?? "All Subjects"}
             onChange={(value) => {
-              if (searchParams.get("search")) {
-                setSearch(searchParams.get("search"));
-              }
-              setSubject(value);
+              handleFilter(value, "subject");
             }}
-            key={subject}
+            key="subject"
           />
         </div>
         <div className="flex flex-shrink-0 flex-grow-0 flex-col gap-2">
@@ -245,27 +240,20 @@ export function Filter() {
           <ComboBox
             options={levels}
             variant="ghost"
-            label={level === "all" ? "All Levels" : level}
+            label={searchParams.get("level")?.toString() ?? "All Levels"}
             onChange={(value) => {
-              if (searchParams.get("search")) {
-                setSearch(searchParams.get("search"));
-              }
-              setLevel(value);
+              handleFilter(value, "level");
             }}
-            key={level}
+            key="level"
           />
         </div>
         <div className="flex flex-shrink-0 flex-grow-0 flex-col gap-2">
           <Label>Search</Label>
           <Input
-            value={tempSearch}
             onChange={(e) => {
-              setTempSearch(e.target.value);
+              handleSearch(e.target.value);
             }}
-            onBlur={(e) => {
-              //When the user clicks outside the search field, update the search state with the temporary search state
-              setSearch(tempSearch);
-            }}
+            defaultValue={searchParams.get("search")?.toString()}
           />
         </div>
         <div className="flex flex-row items-end gap-4">
@@ -284,14 +272,11 @@ export function Filter() {
             <ComboBox
               variant="ghost"
               options={types}
-              label={type === "all" ? "All Types" : type}
+              label={searchParams.get("type")?.toString() ?? "All Types"}
               onChange={(value) => {
-                if (searchParams.get("search")) {
-                  setSearch(searchParams.get("search"));
-                }
-                setType(value);
+                handleFilter(value, "type");
               }}
-              key={type}
+              key="type"
             />
           </div>
           <div className="flex flex-shrink-0 flex-grow-0 flex-col gap-2">
@@ -299,14 +284,11 @@ export function Filter() {
             <ComboBox
               variant="ghost"
               options={campuses}
-              label={campus === "all" ? "All Campuses" : campus}
+              label={searchParams.get("campus")?.toString() ?? "All Campuses"}
               onChange={(value) => {
-                if (searchParams.get("search")) {
-                  setSearch(searchParams.get("search"));
-                }
-                setCampus(value);
+                handleFilter(value, "campus");
               }}
-              key={campus}
+              key={searchParams.get("campus")?.toString()}
             />
           </div>
           <div className="flex flex-shrink-0 flex-grow-0 flex-col gap-2">
@@ -314,14 +296,13 @@ export function Filter() {
             <ComboBox
               variant="ghost"
               options={languages}
-              label={language === "all" ? "All Languages" : language}
+              label={
+                searchParams.get("language")?.toString() ?? "All Languages"
+              }
               onChange={(value) => {
-                if (searchParams.get("search")) {
-                  setSearch(searchParams.get("search"));
-                }
-                setLanguage(value);
+                handleFilter(value, "language");
               }}
-              key={language}
+              key="language"
             />
           </div>
         </div>

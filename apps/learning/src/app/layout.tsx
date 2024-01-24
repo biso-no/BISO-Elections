@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 
 import { Toaster } from "~/components/ui/toaster";
 import { TRPCReactProvider } from "~/trpc/react";
+import { Providers } from "./_components/providers";
 
 const fontSans = Inter({
   subsets: ["latin"],
@@ -38,8 +39,15 @@ export default function Layout(props: { children: React.ReactNode }) {
     <html lang="en">
       <body className={["font-sans", fontSans.variable].join(" ")}>
         <TRPCReactProvider headersPromise={getHeaders()}>
-          {props.children}
-          <Toaster />
+          <Providers
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {props.children}
+            <Toaster />
+          </Providers>
         </TRPCReactProvider>
       </body>
     </html>

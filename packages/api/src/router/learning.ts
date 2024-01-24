@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { desc, eq, schema } from "@acme/db";
+import { desc, eq, schema, sql } from "@acme/db";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -53,6 +53,53 @@ export const learningRouter = createTRPCRouter({
       limit: 20,
     });
   }),
+  filtered: protectedProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        sortType: z.string().optional(),
+        sortOrder: z.string().optional(),
+        topic: z.string().optional(),
+        subject: z.string().optional(),
+        level: z.string().optional(),
+        type: z.string().optional(),
+        campus: z.string().optional(),
+        language: z.string().optional(),
+      }),
+    )
+    .query(({ ctx, input }) => {
+      return ctx.db.query.course.findMany({
+        orderBy: desc(schema.course.id),
+        columns: {
+          name: true,
+          description: true,
+          createdAt: true,
+          createdBy: true,
+          id: true,
+          image: true,
+          logo: true,
+          updatedAt: true,
+        },
+        where: sql`to_tsvector(name || ' ' || description) @@ to_tsquery(${input.search})`,
+        with: {
+          lessons: {
+            with: {
+              pages: {
+                with: {
+                  chapterProgress: {
+                    columns: {
+                      progress: true,
+                    },
+                    where: eq(schema.chapterProgress.userId, ctx.user.id),
+                  },
+                },
+              },
+            },
+          },
+        },
+        limit: 20,
+      });
+    }),
   mine: adminProcedure.query(({ ctx }) => {
     return ctx.db.query.course.findMany({
       where: eq(schema.course.createdBy, ctx.user.id),
