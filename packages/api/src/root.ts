@@ -10,7 +10,7 @@ import { createTRPCRouter } from "./trpc";
 export const appRouter = createTRPCRouter({
   auth: authRouter,
   post: postRouter,
-  election: electionsRouter,
+  elections: electionsRouter,
   expense: expenseRouter,
   voter: votersRouter,
   profile: profileRouter,

@@ -45,8 +45,55 @@ export const signInWithGithub = async () => {
   throw res.error;
 };
 
+export const signInWithEmail = async (email: string) => {
+  const supabase = createServerActionClient({ cookies });
+  const origin = headers().get("origin");
+
+  const { error, data } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${origin}/auth/callback`,
+    },
+  });
+
+  return {
+    user: data.user,
+    error: error,
+  };
+};
+
+export const signInWithAzure = async () => {
+  const supabase = createServerActionClient({ cookies });
+  const origin = headers().get("origin");
+
+  const res = await supabase.auth.signInWithOAuth({
+    provider: "azure",
+    options: { redirectTo: `${origin}/auth/callback` },
+  });
+
+  if (res.data.url) redirect(res.data.url);
+  console.log("res.error", res.error); // TODO: remove this line
+  throw res.error;
+};
+
 export const signOut = async () => {
   const supabase = createServerActionClient({ cookies });
-  await supabase.auth.signOut();
-  redirect("/");
+
+  const { error } = await supabase.auth.signOut();
+
+  return {
+    error: error,
+  };
+};
+
+export const getUser = async () => {
+  const supabase = createServerActionClient({ cookies });
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  return {
+    user: user,
+  };
 };

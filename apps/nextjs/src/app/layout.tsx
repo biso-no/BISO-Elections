@@ -6,7 +6,9 @@ import "~/styles/globals.css";
 import { cache } from "react";
 import { headers } from "next/headers";
 
+import { Toaster } from "~/components/ui/toaster";
 import { TRPCReactProvider } from "~/trpc/react";
+import { Providers } from "./_components/providers";
 
 const fontSans = Inter({
   subsets: ["latin"],
@@ -14,7 +16,7 @@ const fontSans = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "T3 Turbo x Supabase",
+  title: "BISO Elections",
   description: "Simple monorepo with shared backend for web & mobile apps",
   openGraph: {
     title: "T3 Turbo x Supabase",
@@ -37,7 +39,10 @@ export default function Layout(props: { children: React.ReactNode }) {
     <html lang="en">
       <body className={["font-sans", fontSans.variable].join(" ")}>
         <TRPCReactProvider headersPromise={getHeaders()}>
-          {props.children}
+          <Providers>
+            {props.children}
+            <Toaster />
+          </Providers>
         </TRPCReactProvider>
       </body>
     </html>
