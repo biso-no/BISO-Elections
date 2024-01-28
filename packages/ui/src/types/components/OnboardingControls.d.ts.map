@@ -1,0 +1,1 @@
+{"version":3,"file":"OnboardingControls.d.ts","sourceRoot":"","sources":["../../src/components/OnboardingControls.tsx"],"names":[],"mappings":"AAGA,MAAM,MAAM,uBAAuB,GAAG;IACpC,UAAU,EAAE,MAAM,CAAA;IAClB,QAAQ,EAAE,CAAC,MAAM,EAAE,MAAM,KAAK,IAAI,CAAA;IAClC,UAAU,EAAE,MAAM,CAAA;IAClB;;OAEG;IACH,QAAQ,CAAC,EAAE,MAAM,IAAI,CAAA;CACtB,CAAA;AAED,eAAO,MAAM,kBAAkB,0CAI5B,uBAAuB,4CAkDzB,CAAA"}

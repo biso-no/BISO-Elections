@@ -1,0 +1,53 @@
+{
+  "name": "@acme/ui",
+  "private": true,
+  "version": "0.1.0",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "src/*"
+      ]
+    }
+  },
+  "license": "MIT",
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules",
+    "lint": "eslint .",
+    "format": "prettier --check . --ignore-path ../../.gitignore",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@acme/eslint-config": "workspace:^0.2.0",
+    "@acme/prettier-config": "workspace:^0.1.0",
+    "@acme/tsconfig": "workspace:^0.1.0",
+    "eslint": "^8.53.0",
+    "typescript": "^5.3.3"
+  },
+  "eslintConfig": {
+    "extends": [
+      "@acme/eslint-config/base"
+    ]
+  },
+  "prettier": "@acme/prettier-config",
+  "dependencies": {
+    "@hookform/resolvers": "^3.3.4",
+    "@tamagui/animations-moti": "^1.75.9",
+    "@tamagui/animations-react-native": "^1.75.9",
+    "@tamagui/cli": "^1.75.9",
+    "@tamagui/create-theme": "^1.75.9",
+    "@tamagui/font-inter": "^1.75.9",
+    "@tamagui/helpers-icon": "^1.75.9",
+    "@tamagui/react-native-media-driver": "^1.75.9",
+    "@tamagui/shorthands": "^1.75.9",
+    "@tamagui/theme-builder": "^1.75.9",
+    "@tamagui/lucide-icons": "1.88.13",
+    "@tamagui/themes": "^1.75.9",
+    "@tamagui/toast": "^1.75.9",
+    "@ts-react/form": "^1.8.3",
+    "expo-linear-gradient": "^12.7.1",
+    "tamagui": "^1.88.13"
+  }
+}

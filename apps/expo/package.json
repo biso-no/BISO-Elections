@@ -5,7 +5,7 @@
   "main": "expo-router/entry",
   "scripts": {
     "clean": "git clean -xdf .expo .turbo node_modules",
-    "dev": "expo start --ios",
+    "dev": "expo start --android",
     "dev:android": "expo start --android",
     "dev:ios": "expo start --ios",
     "lint": "eslint .",
@@ -15,6 +15,9 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
+    "@acme/api": "workspace:^0.1.0",
+    "@acme/ui": "workspace:^0.1.0",
+    "@acme/app": "workspace:^0.1.0",
     "@expo/metro-config": "^0.10.7",
     "@shopify/flash-list": "1.4.3",
     "@supabase/auth-helpers-react": "^0.4.2",
@@ -45,7 +48,6 @@
     "superjson": "2.2.1"
   },
   "devDependencies": {
-    "@acme/api": "workspace:^0.1.0",
     "@acme/eslint-config": "workspace:^0.2.0",
     "@acme/prettier-config": "workspace:^0.1.0",
     "@acme/tailwind-config": "workspace:^0.1.0",

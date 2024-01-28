@@ -1,0 +1,1 @@
+{"version":3,"file":"OnboardingStepContent.d.ts","sourceRoot":"","sources":["../../src/components/OnboardingStepContent.tsx"],"names":[],"mappings":"AACA,OAAO,EAAE,SAAS,EAAE,MAAM,uBAAuB,CAAA;AACjD,OAAO,KAAK,MAAM,OAAO,CAAA;AAEzB,eAAO,MAAM,WAAW;UAKhB,MAAM,EAAE,CAAC,SAAS,CAAC;WAClB,MAAM;iBACA,MAAM;6CAqEpB,CAAA"}
