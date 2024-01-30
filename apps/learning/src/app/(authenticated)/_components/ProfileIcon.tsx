@@ -70,6 +70,7 @@ export function ProfilePopover() {
               <Input
                 placeholder="Email"
                 value={email}
+                type="email"
                 onChange={(e) => setEmail(e.target.value)}
               />
               <Button variant="ghost" onClick={onSignIn}>

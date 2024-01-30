@@ -1,66 +1,75 @@
-"use client";
-
+import Image from "next/image";
 import Link from "next/link";
 
 import { ModeToggle } from "~/components/theme-toggle";
-import {
-  NavigationMenu,
-  NavigationMenuLink,
-  NavigationMenuList,
-} from "~/components/ui/navigation-menu";
+import { Input } from "~/components/ui/input";
+import { api } from "~/trpc/server";
 import { ProfilePopover } from "./ProfileIcon";
 
-const navItems = [
-  {
-    name: "Video Tutorials",
-    href: "#",
-  },
-  {
-    name: "Quizzes",
-    href: "#",
-  },
-  {
-    name: "Text Guides",
-    href: "#",
-  },
-];
-
 //A dynamic alternative to the navbar below
-export function Navbar() {
-  return (
-    <header className="flex h-20 w-full items-center justify-between px-4 md:px-6">
-      {/* Left side content: Logo and Navigation Menu */}
-      <div className="flex items-center">
-        <Link className="mr-6" href="#">
-          <MountainIcon className="h-6 w-6" />
-          <span className="sr-only">BISO</span>
-        </Link>
-        <NavigationMenu className="hidden lg:flex">
-          <NavigationMenuList>
-            {navItems.map((item) => (
-              <NavigationMenuLink asChild key={item.name}>
-                <Link
-                  className="group inline-flex h-9 w-max items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors"
-                  href={item.href}
-                >
-                  {item.name}
-                </Link>
-              </NavigationMenuLink>
-            ))}
-          </NavigationMenuList>
-        </NavigationMenu>
-      </div>
+export async function Navbar() {
+  const user = await api.auth.me.query();
 
-      {/* Right side content: ModeToggle and ProfilePopover */}
-      <div className="flex items-center gap-4">
-        <ModeToggle />
-        <ProfilePopover />
+  const role = user?.app_metadata.role;
+
+  console.log("User", user);
+
+  return (
+    <header className="py-4 shadow-sm">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4">
+        <div className="flex items-center space-x-4">
+          <Image
+            alt="Logo"
+            className="h-10"
+            height="40"
+            src="/icon.png"
+            style={{
+              aspectRatio: "40/40",
+              objectFit: "cover",
+            }}
+            width="40"
+          />
+          <nav className="hidden space-x-4 md:flex">
+            <Link
+              className="text-sm font-semibold text-gray-700 hover:text-gray-900 hover:underline"
+              href="#"
+            >
+              Home
+            </Link>
+            <Link
+              className="text-sm font-semibold text-gray-700 hover:text-gray-900 hover:underline"
+              href="#"
+            >
+              My Courses
+            </Link>
+          </nav>
+        </div>
+        <div className="flex items-center space-x-4">
+          {role === "admin" && (
+            <Link
+              className="text-sm font-semibold text-gray-700 hover:text-gray-900 hover:underline"
+              href="/admin/courses"
+            >
+              Admin
+            </Link>
+          )}
+          <div className="flex items-center rounded-md bg-gray-100 px-3 py-1.5 dark:bg-gray-800">
+            <SearchIcon className="h-4 w-4 text-gray-400" />
+            <Input
+              className="border-none bg-transparent text-sm"
+              placeholder="Search..."
+              type="search"
+            />
+          </div>
+          <ModeToggle />
+          <ProfilePopover />
+        </div>
       </div>
     </header>
   );
 }
 
-function MountainIcon(props: React.ComponentProps<"svg">) {
+function SearchIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}
@@ -74,7 +83,8 @@ function MountainIcon(props: React.ComponentProps<"svg">) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <path d="m8 3 4 8 5-5 5 15H2L8 3z" />
+      <circle cx="11" cy="11" r="8" />
+      <path d="m21 21-4.3-4.3" />
     </svg>
   );
 }

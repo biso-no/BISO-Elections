@@ -118,7 +118,7 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
 
 const adminOnly = t.middleware(async ({ ctx, next }) => {
-  if (!ctx.user?.id || ctx.user?.user_metadata?.role !== "admin") {
+  if (!ctx.user?.id || ctx.user?.app_metadata?.role !== "admin") {
     throw new TRPCError({ code: "UNAUTHORIZED" });
   }
 

@@ -48,7 +48,7 @@ export function VideoPreview({
       const { error, data } = await supabase.storage
         .from("courses")
         .upload(
-          `videos/course-${courseId}/chapter-${chapterId}/${new Date().getTime()}.mp4`,
+          `material/course-${courseId}/chapter-${chapterId}/${new Date().getTime()}.mp4`,
           acceptedFiles[0],
         );
       if (error) {

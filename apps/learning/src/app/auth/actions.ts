@@ -93,3 +93,18 @@ export const signInWithAzure = async () => {
   console.log("res.error", res.error); // TODO: remove this line
   throw res.error;
 };
+
+export const updateUserMetaData = async (userId: string, role: string) => {
+  const response = await fetch("http://localhost:8005/updateRole", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ userId, role }),
+  });
+  const { error, data } = await response.json();
+  return {
+    error: error,
+    data: data,
+  };
+};

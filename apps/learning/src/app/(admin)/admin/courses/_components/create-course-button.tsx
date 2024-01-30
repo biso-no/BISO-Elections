@@ -22,10 +22,10 @@ export function CreateCourseButton() {
     const course = await createCourse({
       name: "New Course",
       description: "New Course",
-      logo: "https://picsum.photos/200",
-      image: "https://picsum.photos/200",
+      logo: "/course-placeholder.png",
+      image: "/course-placeholder.png",
     });
-    const id = course[0].id;
+    const id = course[0]?.id;
 
     if (id) router.push(`/admin/courses/create/${id}`);
   };

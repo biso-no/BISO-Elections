@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import type { RouterOutputs } from "@acme/api";
@@ -41,7 +42,18 @@ export function Tutorials(props: {
                 {" "}
                 {/* Add shadow and hover effect */}
                 <CardContent>
-                  <div className="aspect-[16/9] w-full bg-gray-200"></div>
+                  {!course?.image ? (
+                    <div className="aspect-[16/9] w-full bg-gray-200"></div>
+                  ) : (
+                    <div className="width-full flex justify-center">
+                      <Image
+                        src={course.image}
+                        width={277}
+                        height={163}
+                        alt="course image"
+                      />
+                    </div>
+                  )}
                   {/* Add a background color for the aspect ratio placeholder */}
                   <h3 className="mt-4 text-lg font-semibold">{course.name}</h3>
 
