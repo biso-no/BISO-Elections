@@ -1,9 +1,7 @@
 "use client";
 
-import { use, useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { Text, Tv2 } from "lucide-react";
-import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import type { RouterOutputs } from "@acme/api";
@@ -31,10 +29,6 @@ import {
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
 
-const formSchema = z.object({
-  name: z.string().min(1).optional(),
-});
-
 interface Props {
   courseId: string;
   setActiveChapter: (chapter: RouterOutputs["learning"]["chapters"][0]) => void;
@@ -50,13 +44,6 @@ export function Sessions(props: Props) {
     useState<RouterOutputs["learning"]["lessons"][0]>();
   const utils = api.useUtils();
   const toast = useToast();
-
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: contextLesson?.name,
-    },
-  });
 
   const { mutateAsync: createLesson } = api.learning.createLesson.useMutation({
     onSuccess: async () => {
@@ -123,58 +110,6 @@ export function Sessions(props: Props) {
       });
     },
   });
-
-  const { mutateAsync: deleteChapter } = api.learning.deleteChapter.useMutation(
-    {
-      onSuccess: async () => {
-        await utils.learning.lessons.invalidate();
-      },
-      onError: (err) => {
-        toast.toast({
-          title:
-            err?.data?.code === "UNAUTHORIZED"
-              ? "You must be logged in to post"
-              : "Failed to create post",
-          description: "Please try again later",
-          variant: "destructive",
-        });
-      },
-    },
-  );
-
-  const { mutateAsync: renameChapter } = api.learning.updateChapter.useMutation(
-    {
-      onSuccess: async () => {
-        await utils.learning.lessons.invalidate();
-      },
-      onError: (err) => {
-        toast.toast({
-          title:
-            err?.data?.code === "UNAUTHORIZED"
-              ? "You must be logged in to post"
-              : "Failed to create post",
-          description: "Please try again later",
-          variant: "destructive",
-        });
-      },
-    },
-  );
-
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    if (!contextLesson) return;
-    await renameLesson({
-      id: contextLesson.id,
-      name: data.name,
-    });
-  };
-
-  const onSubmitChapter = async (data: z.infer<typeof formSchema>) => {
-    if (!contextLesson) return;
-    await renameChapter({
-      id: contextLesson.id,
-      name: data.name,
-    });
-  };
 
   if (!sessions) {
     return (

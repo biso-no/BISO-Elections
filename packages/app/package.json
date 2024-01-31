@@ -35,7 +35,7 @@
     "@tamagui/colors": "^1.75.9",
     "@tamagui/font-inter": "^1.75.9",
     "@tamagui/helpers-icon": "^1.75.9",
-    "@tamagui/lucide-icons": "^1.88.13",
+    "@tamagui/lucide-icons": "1.88.13",
     "@tamagui/shorthands": "^1.75.9",
     "@tamagui/themes": "^1.75.9",
     "@supabase/supabase-js": "^2.39.0",

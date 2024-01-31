@@ -10,7 +10,7 @@ import { ProfilePopover } from "./ProfileIcon";
 export async function Navbar() {
   const user = await api.auth.me.query();
 
-  const role = user?.app_metadata.role;
+  const role = user?.user_metadata.role as string;
 
   console.log("User", user);
 

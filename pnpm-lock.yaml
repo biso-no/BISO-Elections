@@ -544,7 +544,7 @@ importers:
         specifier: ^1.75.9
         version: 1.88.13(react-native-svg@14.1.0)(react@18.2.0)
       '@tamagui/lucide-icons':
-        specifier: ^1.88.13
+        specifier: 1.88.13
         version: 1.88.13(react-native-svg@14.1.0)(react@18.2.0)
       '@tamagui/shorthands':
         specifier: ^1.75.9
