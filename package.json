@@ -20,12 +20,12 @@
     "lint:ws": "pnpm dlx sherif@latest",
     "typecheck": "turbo typecheck"
   },
-  "devDependencies": {
-    "@acme/prettier-config": "workspace:^",
+  "prettier": "@acme/prettier-config",
+  "dependencies": {
+    "@acme/prettier-config": "0.1.0",
     "@turbo/gen": "^1.11.3",
-    "prettier": "^3.2.4",
+    "prettier": "^3.1.0",
     "turbo": "^1.11.3",
     "typescript": "^5.3.3"
-  },
-  "prettier": "@acme/prettier-config"
+  }
 }

@@ -20,9 +20,9 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@acme/eslint-config": "workspace:^0.2.0",
-    "@acme/prettier-config": "workspace:^0.1.0",
-    "@acme/tsconfig": "workspace:^0.1.0",
+    "@acme/eslint-config": "0.2.0",
+    "@acme/prettier-config": "0.1.0",
+    "@acme/tsconfig": "0.1.0",
     "eslint": "^8.53.0",
     "typescript": "^5.3.3"
   },
@@ -40,10 +40,10 @@
     "@tamagui/create-theme": "^1.75.9",
     "@tamagui/font-inter": "^1.75.9",
     "@tamagui/helpers-icon": "^1.75.9",
+    "@tamagui/lucide-icons": "1.88.13",
     "@tamagui/react-native-media-driver": "^1.75.9",
     "@tamagui/shorthands": "^1.75.9",
     "@tamagui/theme-builder": "^1.75.9",
-    "@tamagui/lucide-icons": "1.88.13",
     "@tamagui/themes": "^1.75.9",
     "@tamagui/toast": "^1.75.9",
     "@ts-react/form": "^1.8.3",

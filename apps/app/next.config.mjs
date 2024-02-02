@@ -5,7 +5,7 @@ import "./src/env.mjs";
 const config = {
   reactStrictMode: true,
   /** Enables hot reloading for local packages without a build step */
-  transpilePackages: ["@acme/api", "@acme/db"],
+  transpilePackages: ["@acme/api", "@acme/db", "@acme/novu"],
 
   // Allow optimizing avatar images from GitHub
   images: {

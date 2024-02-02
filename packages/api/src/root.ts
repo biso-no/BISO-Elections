@@ -2,6 +2,7 @@ import { authRouter } from "./router/auth";
 import { electionsRouter } from "./router/election";
 import { expenseRouter } from "./router/expense";
 import { learningRouter } from "./router/learning";
+import { notificationRouter } from "./router/notification";
 import { postRouter } from "./router/post";
 import { profileRouter } from "./router/profile";
 import { votersRouter } from "./router/voter";
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
   voter: votersRouter,
   profile: profileRouter,
   learning: learningRouter,
+  notification: notificationRouter,
 });
 
 // export type definition of API
