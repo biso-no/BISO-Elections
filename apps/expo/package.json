@@ -15,9 +15,6 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
-    "@acme/api": "workspace:^0.1.0",
-    "@acme/ui": "workspace:^0.1.0",
-    "@acme/app": "workspace:^0.1.0",
     "@expo/metro-config": "^0.10.7",
     "@shopify/flash-list": "1.4.3",
     "@supabase/auth-helpers-react": "^0.4.2",
@@ -28,8 +25,10 @@
     "@trpc/server": "next",
     "expo": "^49.0.21",
     "expo-apple-authentication": "~6.1.2",
+    "expo-auth-session": "^5.0.2",
     "expo-constants": "~14.4.2",
     "expo-crypto": "^12.4.1",
+    "expo-dev-client": "~2.4.12",
     "expo-image": "~1.3.5",
     "expo-linking": "~5.0.2",
     "expo-router": "2.0.14",
@@ -48,6 +47,7 @@
     "superjson": "2.2.1"
   },
   "devDependencies": {
+    "@acme/api": "workspace:^0.1.0",
     "@acme/eslint-config": "workspace:^0.2.0",
     "@acme/prettier-config": "workspace:^0.1.0",
     "@acme/tailwind-config": "workspace:^0.1.0",

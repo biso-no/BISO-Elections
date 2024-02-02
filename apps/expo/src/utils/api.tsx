@@ -30,6 +30,7 @@ const getBaseUrl = () => {
 
   const debuggerHost = Constants.expoConfig?.hostUri;
   const localhost = debuggerHost?.split(":")[0];
+  console.log("localhost", localhost);
 
   if (!localhost) {
     // return "https://turbo.t3.gg";
@@ -37,7 +38,7 @@ const getBaseUrl = () => {
       "Failed to get localhost. Please point to your production server.",
     );
   }
-  return `http://${localhost}:3000`;
+  return `http://${localhost}:3001`;
 };
 
 /**

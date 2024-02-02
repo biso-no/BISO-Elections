@@ -1,5 +1,6 @@
 import type { ExpoConfig } from "@expo/config";
 
+/*
 if (
   !process.env.EXPO_PUBLIC_SUPABASE_URL ||
   !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
@@ -8,12 +9,12 @@ if (
     "Please provide SUPABASE_URL and SUPABASE_ANON_KEY in your .env file",
   );
 }
-
+*/
 const defineConfig = (): ExpoConfig => ({
-  name: "expo",
-  slug: "expo",
-  scheme: "expo",
-  version: "2.0.0",
+  name: "bisodev",
+  slug: "bisodev",
+  scheme: "bisodev",
+  version: "0.1.0",
   orientation: "portrait",
   icon: "./assets/icon.png",
   userInterfaceStyle: "dark",
@@ -27,12 +28,12 @@ const defineConfig = (): ExpoConfig => ({
   },
   assetBundlePatterns: ["**/*"],
   ios: {
-    bundleIdentifier: "your.bundle.identifier",
+    bundleIdentifier: "com.biso.dev",
     supportsTablet: true,
     usesAppleSignIn: true,
   },
   android: {
-    package: "your.bundle.identifier",
+    package: "com.biso.dev",
     adaptiveIcon: {
       foregroundImage: "./assets/icon.png",
       backgroundColor: "#18181A",
@@ -42,11 +43,11 @@ const defineConfig = (): ExpoConfig => ({
     tsconfigPaths: true,
     typedRoutes: true,
   },
-  // extra: {
-  //   eas: {
-  //     projectId: "your-project-id",
-  //   },
-  // },
+  extra: {
+    eas: {
+      projectId: "917fffac-6399-4a38-9c67-63381bf19b89",
+    },
+  },
   plugins: [
     "./expo-plugins/with-modify-gradle.js",
     "expo-apple-authentication",
