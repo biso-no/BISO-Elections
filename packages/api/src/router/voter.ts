@@ -98,7 +98,7 @@ export const votersRouter = createTRPCRouter({
     .input(z.object({ id: z.string(), candidateId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const voter = await ctx.db.query.electionVoter.findFirst({
-        where: eq(schema.electionVoter.id, input.id),
+        where: eq(schema.electionVoter.profileId, ctx.user.id),
       });
       if (!voter) {
         throw new TRPCError({

@@ -1,5 +1,5 @@
 {
-  "name": "@acme/{{ name }}",
+  "name": "@acme/supa",
   "private": true,
   "version": "0.1.0",
   "exports": {
@@ -24,7 +24,8 @@
     "@acme/prettier-config": "workspace:^0.1.0",
     "@acme/tsconfig": "workspace:^0.1.0",
     "eslint": "^8.53.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@supabase/supabase-js": "^2.39.0"
   },
   "eslintConfig": {
     "extends": [

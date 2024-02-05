@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "~/components/ui/button";
@@ -12,9 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
-import { useElectionId } from "~/lib/hooks/useElectionId";
 import { api } from "~/trpc/react";
 
 export const SelectElection = () => {
@@ -22,7 +20,7 @@ export const SelectElection = () => {
 
   const router = useRouter();
 
-  const { data: elections } = api.voters.all.useQuery();
+  const { data: elections } = api.voter.all.useQuery();
 
   useEffect(() => {
     if (elections?.length === 1) {
@@ -37,7 +35,7 @@ export const SelectElection = () => {
     } catch (error) {
       toast.toast({
         title: "Error",
-        description: error.message || "Something went wrong",
+        description: "Something went wrong",
         variant: "destructive",
       });
     }

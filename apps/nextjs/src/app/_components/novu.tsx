@@ -15,9 +15,9 @@ export function NovuProvider(props: Props) {
     <>
       <DefaultNovuProvider
         subscriberId={data?.id}
-        applicationIdentifier="WOTPhMCjY9sj"
-        backendUrl="https://api-e04swc0.biso.no"
-        socketUrl="https://ws-e04swc0.biso.no"
+        applicationIdentifier="ZRR2BCecmAIx"
+        backendUrl="https://api-vccocww.biso.no"
+        socketUrl="https://ws-vccocww.biso.no"
       >
         {props.children}
       </DefaultNovuProvider>

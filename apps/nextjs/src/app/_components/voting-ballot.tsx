@@ -1,14 +1,11 @@
 "use client";
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
-import React, { useEffect, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import React, { useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -26,7 +23,6 @@ interface VotingBallotProps {
 }
 
 export function VotingBallot({
-  userId,
   electionId,
   disabled = false,
   multiSelect = false,
@@ -34,21 +30,18 @@ export function VotingBallot({
   preview = false,
 }: VotingBallotProps) {
   const [selectedCandidates, setSelectedCandidates] = useState<
-    Record<number, number[]>
+    Record<string, string[]>
   >({});
-  const [user, setUser] = useState<any>(null);
 
   const toast = useToast();
 
-  const supabase = createClientComponentClient();
-
-  const [channel, setChannel] = useState<RealtimeChannel>();
-
-  const { data: session } = api.voters.activeSession.useQuery({
+  const { data: session } = api.voter.activeSession.useQuery({
     id: electionId,
   });
 
-  const handleCardClick = (positionId: number, candidateId: number) => {
+  const { mutateAsync: vote } = api.voter.vote.useMutation();
+
+  const handleCardClick = (positionId: string, candidateId: string) => {
     setSelectedCandidates((prevSelected) => {
       const updatedSelection = [...(prevSelected[positionId] ?? [])];
       if (multiSelect) {
@@ -68,7 +61,7 @@ export function VotingBallot({
     });
   };
 
-  const onSubmit = async (selectedCandidates: number[]) => {
+  const onSubmit = async (selectedCandidates: string[]) => {
     if (preview) {
       console.log(
         `You have voted for ${selectedCandidates
@@ -76,29 +69,44 @@ export function VotingBallot({
             (candidateId) =>
               session?.positions
                 .flatMap((position) => position.candidates)
-                .find((candidate) => candidate.id === candidateId).name,
+                .find((candidate) => candidate.id === candidateId)?.name ??
+              "Candidate not found",
           )
           .join(", ")}`,
       );
     } else {
-      console.log(
-        `You have voted for ${selectedCandidates
-          .map(
-            (candidateId) =>
-              session.positions
-                .flatMap((position: any) => position.candidates)
-                .find((candidate: any) => candidate.id === candidateId).name,
-          )
-          .join(", ")}`,
-      );
+      try {
+        await vote({ candidateIds: selectedCandidates });
+        toast.toast({
+          title: "Success",
+          description: "Your vote has been submitted",
+        });
+      } catch (error) {
+        toast.toast({
+          title: "Error",
+          description: "Something went wrong",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  const handleSubmit = () => {
+  async function handleSubmit() {
     if (preview) {
       toast.toast({
         title: "Preview Mode",
-        description: `You're currently in preview mode. No changes can be made.`,
+        description: `You're currently in preview mode. Your preview votes: ${Object.values(
+          selectedCandidates,
+        )
+          .flat()
+          .map(
+            (candidateId) =>
+              session?.positions
+                .flatMap((position) => position.candidates)
+                .find((candidate) => candidate.id === candidateId)?.name ??
+              "Candidate not found",
+          )
+          .join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -121,40 +129,24 @@ export function VotingBallot({
       return;
     }
 
-    onSubmit();
+    const candidateIds = Object.values(selectedCandidates).flat();
+
+    await onSubmit(candidateIds);
     setSelectedCandidates({});
-  };
-
-  useEffect(() => {
-    if (electionId) {
-      const channel = supabase.channel(`elections:${electionId}`);
-      setChannel(channel);
-    }
-  }, [electionId, supabase]);
-
-  useEffect(() => {
-    if (!preview && channel) {
-      channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          void channel.track({ userId });
-        }
-      });
-    }
-  }, [channel, preview, userId]);
+  }
 
   return (
     <div className="flex flex-col items-center justify-center">
       <h1 className="text-2xl font-bold">{session?.name}</h1>
       <div className="grid grid-cols-1 gap-4">
-        {session?.positions.map((position: any) => (
+        {session?.positions.map((position) => (
           <Card key={position.id}>
             <CardHeader>
               <CardTitle>{position.name}</CardTitle>
-              <CardDescription>{position.description}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-4">
-                {position.candidates.map((candidate: any) => (
+                {position.candidates.map((candidate) => (
                   <Card
                     key={candidate.id}
                     onClick={() => handleCardClick(position.id, candidate.id)}
@@ -166,7 +158,6 @@ export function VotingBallot({
                   >
                     <CardHeader>
                       <CardTitle>{candidate.name}</CardTitle>
-                      <CardDescription>{candidate.description}</CardDescription>
                     </CardHeader>
                   </Card>
                 ))}

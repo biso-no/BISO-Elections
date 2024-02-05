@@ -42,10 +42,10 @@ export async function GET(request: NextRequest) {
             {
               id: updateUserData?.user?.id,
               email: updateUserData?.user?.email,
-              name: data.session?.user?.user_metadata?.full_name || "na",
+              name: data.session?.user?.user_metadata?.full_name ?? "na",
               user_role: "admin",
               image:
-                data.session?.user.user_metadata.avatar_url ||
+                data.session?.user.user_metadata.avatar_url ??
                 "https://avatars.githubusercontent.com/u/8186664?v=4",
             },
           ])

@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { desc, eq, schema } from "@acme/db";
+import { adminAuthClient } from "@acme/supa";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -252,6 +253,63 @@ export const electionsRouter = createTRPCRouter({
           vote_weight: input.vote_weight,
         })
         .returning();
+    }),
+  inviteVoters: protectedProcedure
+    .input(
+      z.object({
+        electionId: z.string(),
+        users: z.array(
+          z.object({
+            email: z.string().email(),
+            name: z.string().min(1),
+            voteWeight: z.number().min(1),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      //For each email, invite the user, then create a voter from the user ID.
+      const users = await Promise.all(
+        input.users.map(async (user) => {
+          const { data } = await adminAuthClient.generateLink({
+            type: "magiclink",
+            email: user.email,
+            options: {
+              redirectTo: "http://localhost:3001/auth/callback",
+            },
+          });
+          console.log("Data: ", data);
+          const profile = await ctx.db.query.profile.findFirst({
+            where: eq(schema.profile.email, user.email),
+          });
+
+          if (!profile && data.user) {
+            const newProfile = await ctx.db
+              .insert(schema.profile)
+              .values({
+                id: data.user.id,
+                email: user.email,
+                name: user.name,
+                userRole: "election_participant",
+              })
+              .returning();
+
+            console.log("New Profile: ", newProfile);
+          }
+
+          if (data.user) {
+            return ctx.db
+              .insert(schema.electionVoter)
+              .values({
+                profileId: data.user.id,
+                electionId: input.electionId,
+                vote_weight: user.voteWeight,
+              })
+              .returning();
+          }
+        }),
+      );
+      return users;
     }),
   votes: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionVote.findMany({

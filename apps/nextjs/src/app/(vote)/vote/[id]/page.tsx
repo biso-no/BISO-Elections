@@ -8,9 +8,13 @@ export default async function VotingPage({
 }) {
   const { user } = await getUser();
 
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-2">
-      <VotingBallot electionId={params.id} userId={user?.id} />
+      <VotingBallot electionId={params.id} userId={user.id} />
     </div>
   );
 }

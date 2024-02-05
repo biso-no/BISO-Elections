@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
-  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -16,18 +15,31 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "~/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
+import { api } from "~/trpc/react";
 
 interface InviteUsersProps {
   electionId: string;
 }
 
-interface VoterInvitation {
-  email: string;
-  electionId: string;
-  voteWeight: number;
-}
+const formSchema = z.object({
+  users: z.array(
+    z.object({
+      email: z.string().email(),
+      name: z.string().min(1),
+      voteWeight: z.number().min(1),
+    }),
+  ),
+});
 
 export function InviteUsers({ electionId }: InviteUsersProps) {
   //A button that opens a dialog. In the dialog there are 3 inputs per row. Include a button to add more rows. Each row represent a user to invite.
@@ -37,37 +49,39 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
 
   const [isOpen, setIsOpen] = useState(false);
   const [rows, setRows] = useState(1);
-  const [voters, setVoters] = useState<VoterInvitation[]>([]);
 
-  const invite = async () => {
-    try {
-      const response = await fetch(
-        "http://invite-jk8kgck.biso.no/api/voters/invite",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(voters),
-        },
-      ).then((res) => res.json());
-
+  const { mutateAsync: invite } = api.elections.inviteVoters.useMutation({
+    onSuccess: () => {
       toast.toast({
-        title: response.error ? "Error" : "Success",
-        description: response.error
-          ? response.error.message + " If the error persists, contact support."
-          : "Voters invited.",
-        variant: response.error ? "destructive" : "default",
+        title: "Voters invited",
+        description: "The voters have been invited",
       });
       setIsOpen(false);
-    } catch (error) {
+    },
+    onError: (error) => {
       toast.toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
       });
-    }
-  };
+    },
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      users: [{ email: "", name: "", voteWeight: 1 }],
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "users",
+  });
+
+  if (rows < 1) {
+    setRows(1);
+  }
 
   const addRow = () => {
     setRows(rows + 1);
@@ -77,6 +91,15 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
     setRows(rows - 1);
   };
 
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    console.log("data: ", data);
+    try {
+      await invite({ electionId, users: data.users });
+    } catch (error) {
+      console.error("Error: ", error);
+    }
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -84,81 +107,82 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
           <Button>Invite voters</Button>
         </DialogTrigger>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Invite voters</DialogTitle>
-            <DialogDescription>
-              Invite voters to the election.
-            </DialogDescription>
-          </DialogHeader>
-          {Array.from(Array(rows).keys()).map((row) => (
-            <div className="flex flex-row space-x-4" key={row}>
-              <Input
-                placeholder="Email"
-                type="email"
-                onChange={(e) => {
-                  const email = e.target.value;
-                  setVoters((voters) => {
-                    const voterIndex = voters.findIndex(
-                      (voter, index) => index === row,
-                    );
-                    if (voterIndex !== -1) {
-                      voters[voterIndex].email = email;
-                      return [...voters];
-                    } else {
-                      return [...voters, { email, electionId, voteWeight: 1 }];
-                    }
-                  });
-                }}
-              />
-              <Input
-                placeholder="Name"
-                type="text"
-                onChange={(e) => {
-                  const name = e.target.value;
-                  setVoters((voters) => {
-                    const voterIndex = voters.findIndex(
-                      (voter, index) => index === row,
-                    );
-                    if (voterIndex !== -1) {
-                      voters[voterIndex].name = name;
-                      return [...voters];
-                    } else {
-                      return [...voters, { name, electionId, voteWeight: 1 }];
-                    }
-                  });
-                }}
-              />
-              <Input
-                placeholder="Vote weight"
-                type="number"
-                onChange={(e) => {
-                  const voteWeight = Number(e.target.value);
-                  setVoters((voters) => {
-                    const voterIndex = voters.findIndex(
-                      (voter, index) => index === row,
-                    );
-                    if (voterIndex !== -1) {
-                      voters[voterIndex].voteWeight = voteWeight;
-                      return [...voters];
-                    } else {
-                      return [...voters, { email: "", electionId, voteWeight }];
-                    }
-                  });
-                }}
-              />
-            </div>
-          ))}
-
-          <div className="flex flex-row space-x-4">
-            <Button onClick={addRow}>Add row</Button>
-            <Button onClick={removeRow}>Remove row</Button>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button>Cancel</Button>
-            </DialogClose>
-            <Button onClick={() => invite(voters)}>Invite</Button>
-          </DialogFooter>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <DialogHeader>
+                <DialogTitle>Invite voters</DialogTitle>
+                <DialogDescription>
+                  Invite voters to the election.
+                </DialogDescription>
+              </DialogHeader>
+              {fields.map((field, index) => (
+                <div key={field.id} className="flex items-center space-x-2">
+                  <FormField
+                    control={form.control}
+                    name={`users.${index}.email`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Voter email</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="John Doe"
+                            {...form.register(`users.${index}.email`)}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`users.${index}.name`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Voter name</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="John Doe"
+                            {...form.register(`users.${index}.name`)}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`users.${index}.voteWeight`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Vote weight</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            defaultValue={1}
+                            {...form.register(`users.${index}.voteWeight`)}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="flex-none"
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                onClick={() => append({ email: "", name: "", voteWeight: 1 })}
+              >
+                Add Voter
+              </Button>
+              <DialogFooter>
+                <Button type="submit">Invite</Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
     </>
