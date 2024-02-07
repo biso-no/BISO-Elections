@@ -60,6 +60,29 @@ export const votersRouter = createTRPCRouter({
         },
       });
     }),
+  sessionById: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ ctx, input }) => {
+      return ctx.db.query.electionSession.findFirst({
+        where: eq(schema.electionSession.id, input.id),
+        with: {
+          positions: {
+            columns: {
+              id: true,
+              name: true,
+            },
+            with: {
+              candidates: {
+                columns: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
+    }),
   activeSessionId: protectedProcedure
     .input(z.object({ id: z.string() }))
     .query(({ ctx }) => {
@@ -95,40 +118,85 @@ export const votersRouter = createTRPCRouter({
       });
     }),
   vote: protectedProcedure
-    .input(z.object({ id: z.string(), candidateId: z.string() }))
+    .input(
+      z.object({ sessionId: z.string(), candidateIds: z.array(z.string()) }),
+    )
     .mutation(async ({ ctx, input }) => {
       const voter = await ctx.db.query.electionVoter.findFirst({
-        where: eq(schema.electionVoter.id, input.id),
+        where: eq(schema.electionVoter.profileId, ctx.user.id),
       });
+
       if (!voter) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Voter not found",
-        });
+        throw new TRPCError({ code: "NOT_FOUND", message: "Voter not found" });
       }
-      if (voter.profileId !== ctx.user.id) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "You are not authorized to vote",
-        });
-      }
-      const candidate = await ctx.db.query.electionCandidate.findFirst({
-        where: eq(schema.electionCandidate.id, input.candidateId),
+
+      const session = await ctx.db.query.electionSession.findFirst({
+        where: eq(schema.electionSession.id, input.sessionId),
+        with: {
+          positions: {
+            columns: {
+              id: true,
+              name: true,
+            },
+            with: {
+              candidates: {
+                with: {
+                  position: {
+                    with: {
+                      session: {
+                        columns: {
+                          id: true,
+                          status: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
-      if (!candidate) {
+
+      if (!session) {
         throw new TRPCError({
           code: "NOT_FOUND",
-          message: "Candidate not found",
+          message: "Session not found",
         });
       }
-      await ctx.db
-        .insert(schema.electionVote)
-        .values({
-          electionId: voter.electionId,
-          profileId: ctx.user.id,
-          electionCandidateId: input.candidateId,
-        })
-        .execute();
-      return true;
+
+      if (session.status !== "in_progress") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Session is not in progress",
+        });
+      }
+
+      //Determine which position the candidate is running for, and include the position id in the vote.
+      //Also vote for each candidate in the session.
+      //Insert the votes into the database.
+      const votes = input.candidateIds.map((candidateId) => {
+        const candidate = session.positions
+          .flatMap((position) => position.candidates)
+          .find((c) => c.id === candidateId);
+
+        if (!candidate) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Candidate not found",
+          });
+        }
+
+        return {
+          profileId: voter.profileId,
+          electionId: session.electionId,
+          sessionId: session.id,
+          positionId: candidate.electionPositionId,
+          electionCandidateId: candidate.id,
+          id: voter.id,
+        };
+      });
+
+      return ctx.db.insert(schema.electionVote).values(votes).returning();
     }),
 });

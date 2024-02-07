@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { desc, eq, schema } from "@acme/db";
+import { inviteVoter } from "@acme/supa";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -163,14 +164,28 @@ export const electionsRouter = createTRPCRouter({
         })
         .where(eq(schema.electionSession.id, input.id));
     }),
-  candidates: protectedProcedure
-    .input(z.string())
-    .query(async ({ ctx, input }) => {
-      return ctx.db.query.electionCandidate.findMany({
-        where: eq(schema.electionCandidate.electionPositionId, input),
-      });
-    }),
-  createCandidate: protectedProcedure
+  positions: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionPosition.findMany({
+      where: eq(schema.electionPosition.sessionId, input),
+      with: {
+        candidates: {
+          with: {
+            votes: {
+              columns: {
+                id: true,
+                electionCandidateId: true,
+              },
+            },
+          },
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  }),
+  createCandidate: adminProcedure
     .input(
       z.object({
         electionPositionId: z.string(),
@@ -239,10 +254,15 @@ export const electionsRouter = createTRPCRouter({
       });
 
       if (!profile) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Profile not found",
-        });
+        //Create a new profile
+        await ctx.db
+          .insert(schema.profile)
+          .values({
+            name: input.name,
+            email: "no-email",
+            userRole: "election_participant",
+          })
+          .returning();
       }
       return ctx.db
         .insert(schema.electionVoter)
@@ -253,29 +273,82 @@ export const electionsRouter = createTRPCRouter({
         })
         .returning();
     }),
-  votes: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
+  createMultipleVoters: protectedProcedure
+    .input(
+      z.object({
+        electionId: z.string(),
+        voters: z.array(
+          z.object({
+            name: z.string(),
+            email: z.string(),
+            vote_weight: z.number(),
+          }),
+        ),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      //For each voter, check if their profile exists, if not, create it. Then create the voter
+      const voters = input.voters.map(async (voter) => {
+        const data = await inviteVoter(voter.email);
+
+        if (!data?.data.user) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: data?.error?.message,
+          });
+        }
+
+        return ctx.db
+          .insert(schema.electionVoter)
+          .values({
+            profileId: data.data.user.id,
+            electionId: input.electionId,
+            vote_weight: voter.vote_weight,
+          })
+          .returning();
+      });
+      return Promise.all(voters);
+    }),
+  session: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionSession.findFirst({
+      where: eq(schema.electionSession.id, input),
+      with: {
+        positions: {
+          with: {
+            candidates: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        statuteChanges: true,
+      },
+    });
+  }),
+  votes: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionVote.findMany({
       where: eq(schema.electionVote.electionId, input),
     });
   }),
-  createVote: protectedProcedure
-    .input(
-      z.object({
-        electionId: z.string(),
-        profileId: z.string(),
-        electionCandidateId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Check if the user is an admin of the election
-      return ctx.db
-        .insert(schema.electionVote)
-        .values({
-          electionId: input.electionId,
-          electionCandidateId: input.electionCandidateId,
-          profileId: input.profileId,
-        })
-        .returning();
+  votesByCandidateId: adminProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      return ctx.db.query.electionVote.findMany({
+        where: eq(schema.electionVote.electionCandidateId, input),
+        columns: {
+          electionCandidateId: true,
+        },
+        with: {
+          candidate: {
+            columns: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
     }),
   admins: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionAdmin.findMany({

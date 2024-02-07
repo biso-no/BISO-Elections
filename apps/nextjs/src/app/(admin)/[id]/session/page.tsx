@@ -5,8 +5,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
-import { Table } from "~/app/_components/Table";
+import { VotesDialog } from "~/app/_components/votes-dialog";
 import { VotingBallot } from "~/app/_components/voting-ballot";
+import { PopoverActions } from "~/components/popover-actions";
 import {
   Accordion,
   AccordionContent,
@@ -31,6 +32,14 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import { useToast } from "~/components/ui/use-toast";
 import { useElectionId } from "~/lib/hooks/useElectionId";
 import { api } from "~/trpc/react";
@@ -229,6 +238,19 @@ export default function SessionPage() {
       },
     });
 
+  const onCandidateDelete = async (candidateId: string) => {
+    try {
+      await deleteCandidate(candidateId);
+    } catch {
+      console.log("Error: ", error);
+      toast.toast({
+        title: "Error",
+        description: deleteCandidateError?.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const { mutateAsync: updateSession, error: updateSessionError } =
     api.elections.updateSession.useMutation({
       async onSuccess() {
@@ -398,6 +420,7 @@ export default function SessionPage() {
                           {session.name}
                         </h2>
                         <VotingBallot
+                          initialSessionId={session.id}
                           preview
                           electionId={electionId}
                           userId="1"
@@ -419,6 +442,7 @@ export default function SessionPage() {
                         ? "Deactivate"
                         : "Activate"}
                     </Button>
+                    <VotesDialog sessionId={session.id} />
                   </div>
                   {/*Preview button that opens a dialog with the voting ballot*/}
                   {session.type === "position" && (
@@ -562,10 +586,44 @@ export default function SessionPage() {
                                     </Dialog>
                                   </div>
                                   <div className="mt-4">
-                                    <Table
-                                      key={position.id}
-                                      data={position.candidates}
-                                    />
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>Name</TableHead>
+                                          <TableHead>Actions</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {position.candidates.map(
+                                          (candidate) => (
+                                            <TableRow key={candidate.id}>
+                                              <TableCell>
+                                                {candidate.name}
+                                              </TableCell>
+                                              <TableCell>
+                                                <PopoverActions
+                                                  key={candidate.id}
+                                                  items={[
+                                                    {
+                                                      id: "delete",
+                                                      icon: (
+                                                        <DeleteIcon className="h-4 w-4" />
+                                                      ),
+                                                      label: "Delete",
+                                                      onClick: () => {
+                                                        void onCandidateDelete(
+                                                          candidate.id,
+                                                        );
+                                                      },
+                                                    },
+                                                  ]}
+                                                />
+                                              </TableCell>
+                                            </TableRow>
+                                          ),
+                                        )}
+                                      </TableBody>
+                                    </Table>
                                   </div>
                                 </div>
                               </AccordionContent>
@@ -582,27 +640,6 @@ export default function SessionPage() {
         ))}
       </div>
     </>
-  );
-}
-
-function EditIcon(props: React.ComponentProps<"svg">) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M4 13.5V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2h-5.5" />
-      <polyline points="14 2 14 8 20 8" />
-      <path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44Z" />
-    </svg>
   );
 }
 

@@ -18,15 +18,17 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
+import { api } from "~/trpc/react";
 
 interface InviteUsersProps {
   electionId: string;
 }
 
 interface VoterInvitation {
+  name: string;
   email: string;
   electionId: string;
-  voteWeight: number;
+  vote_weight: number;
 }
 
 export function InviteUsers({ electionId }: InviteUsersProps) {
@@ -36,45 +38,47 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
   const toast = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [rows, setRows] = useState(1);
-  const [voters, setVoters] = useState<VoterInvitation[]>([]);
+  const [voters, setVoters] = useState<VoterInvitation[]>([
+    { name: "", email: "", electionId: "", vote_weight: 0 },
+  ]);
 
-  const invite = async () => {
-    try {
-      const response = await fetch(
-        "http://invite-jk8kgck.biso.no/api/voters/invite",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(voters),
-        },
-      ).then((res) => res.json());
+  const { mutateAsync: inviteVoters } =
+    api.elections.createMultipleVoters.useMutation({
+      onSuccess: () => {
+        toast.toast({
+          title: "Voters invited",
+          description: "The voters have been invited.",
+          variant: "default",
+        });
+        setIsOpen(false);
+      },
+      onError: (error) => {
+        toast.toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
 
-      toast.toast({
-        title: response.error ? "Error" : "Success",
-        description: response.error
-          ? response.error.message + " If the error persists, contact support."
-          : "Voters invited.",
-        variant: response.error ? "destructive" : "default",
-      });
-      setIsOpen(false);
-    } catch (error) {
-      toast.toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
+  const invite = async (voters: VoterInvitation[], electionId: string) => {
+    await inviteVoters({
+      electionId,
+      voters,
+    });
   };
 
   const addRow = () => {
-    setRows(rows + 1);
+    setVoters((prevVoters) => [
+      ...prevVoters,
+      { name: "", email: "", electionId: "", vote_weight: 0 },
+    ]);
   };
 
-  const removeRow = () => {
-    setRows(rows - 1);
+  const removeRow = (rowIndex: number) => {
+    setVoters((prevVoters) =>
+      prevVoters.filter((_, index) => index !== rowIndex),
+    );
   };
 
   return (
@@ -90,74 +94,58 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
               Invite voters to the election.
             </DialogDescription>
           </DialogHeader>
-          {Array.from(Array(rows).keys()).map((row) => (
-            <div className="flex flex-row space-x-4" key={row}>
-              <Input
-                placeholder="Email"
-                type="email"
-                onChange={(e) => {
-                  const email = e.target.value;
-                  setVoters((voters) => {
-                    const voterIndex = voters.findIndex(
-                      (voter, index) => index === row,
-                    );
-                    if (voterIndex !== -1) {
-                      voters[voterIndex].email = email;
-                      return [...voters];
-                    } else {
-                      return [...voters, { email, electionId, voteWeight: 1 }];
-                    }
-                  });
-                }}
-              />
+          {voters.map((voter, index) => (
+            <div key={index} className="flex space-x-4">
               <Input
                 placeholder="Name"
-                type="text"
-                onChange={(e) => {
-                  const name = e.target.value;
-                  setVoters((voters) => {
-                    const voterIndex = voters.findIndex(
-                      (voter, index) => index === row,
-                    );
-                    if (voterIndex !== -1) {
-                      voters[voterIndex].name = name;
-                      return [...voters];
-                    } else {
-                      return [...voters, { name, electionId, voteWeight: 1 }];
-                    }
-                  });
-                }}
+                value={voter.name}
+                onChange={(e) =>
+                  setVoters((prevVoters) =>
+                    prevVoters.map((v, i) =>
+                      i === index ? { ...v, name: e.target.value } : v,
+                    ),
+                  )
+                }
               />
               <Input
-                placeholder="Vote weight"
-                type="number"
-                onChange={(e) => {
-                  const voteWeight = Number(e.target.value);
-                  setVoters((voters) => {
-                    const voterIndex = voters.findIndex(
-                      (voter, index) => index === row,
-                    );
-                    if (voterIndex !== -1) {
-                      voters[voterIndex].voteWeight = voteWeight;
-                      return [...voters];
-                    } else {
-                      return [...voters, { email: "", electionId, voteWeight }];
-                    }
-                  });
-                }}
+                placeholder="Email"
+                value={voter.email}
+                onChange={(e) =>
+                  setVoters((prevVoters) =>
+                    prevVoters.map((v, i) =>
+                      i === index ? { ...v, email: e.target.value } : v,
+                    ),
+                  )
+                }
               />
+              <Input
+                type="number"
+                placeholder="Vote weight"
+                value={voter.vote_weight}
+                onChange={(e) =>
+                  setVoters((prevVoters) =>
+                    prevVoters.map((v, i) =>
+                      i === index
+                        ? { ...v, voteWeight: parseInt(e.target.value) }
+                        : v,
+                    ),
+                  )
+                }
+              />
+              <Button onClick={() => removeRow(index)}>Remove</Button>
             </div>
           ))}
-
-          <div className="flex flex-row space-x-4">
-            <Button onClick={addRow}>Add row</Button>
-            <Button onClick={removeRow}>Remove row</Button>
-          </div>
+          <Button onClick={addRow}>Add row</Button>
           <DialogFooter>
             <DialogClose asChild>
-              <Button>Cancel</Button>
+              <Button variant="ghost">Cancel</Button>
             </DialogClose>
-            <Button onClick={() => invite(voters)}>Invite</Button>
+            <Button
+              onClick={() => invite(voters, electionId)}
+              disabled={voters.length === 0}
+            >
+              Invite
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -8,7 +8,6 @@ import { Button } from "~/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
@@ -17,7 +16,8 @@ import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
 
 interface VotingBallotProps {
-  userId: string;
+  initialSessionId?: string;
+  userId?: string;
   electionId: string;
   disabled?: boolean;
   multiSelect?: boolean;
@@ -26,6 +26,7 @@ interface VotingBallotProps {
 }
 
 export function VotingBallot({
+  initialSessionId,
   userId,
   electionId,
   disabled = false,
@@ -34,9 +35,8 @@ export function VotingBallot({
   preview = false,
 }: VotingBallotProps) {
   const [selectedCandidates, setSelectedCandidates] = useState<
-    Record<number, number[]>
+    Record<string, string[]>
   >({});
-  const [user, setUser] = useState<any>(null);
 
   const toast = useToast();
 
@@ -44,11 +44,39 @@ export function VotingBallot({
 
   const [channel, setChannel] = useState<RealtimeChannel>();
 
-  const { data: session } = api.voters.activeSession.useQuery({
-    id: electionId,
+  if (!initialSessionId) {
+    throw new Error("sessionId is required");
+  }
+
+  const { data: session } = api.voter.sessionById.useQuery({
+    id: initialSessionId,
   });
 
-  const handleCardClick = (positionId: number, candidateId: number) => {
+  const { mutateAsync: vote } = api.voter.vote.useMutation({
+    onSuccess: () => {
+      toast.toast({
+        title: "Vote Submitted",
+        description: "Your vote has been submitted successfully.",
+      });
+    },
+    onError: (error) => {
+      toast.toast({
+        title: "Vote Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (userId && !preview) {
+      const channel = supabase.channel(`elections:${electionId}`);
+      channel.subscribe();
+      setChannel(channel);
+    }
+  }, [userId, electionId, supabase, preview]);
+
+  const handleCardClick = (positionId: string, candidateId: string) => {
     setSelectedCandidates((prevSelected) => {
       const updatedSelection = [...(prevSelected[positionId] ?? [])];
       if (multiSelect) {
@@ -68,29 +96,23 @@ export function VotingBallot({
     });
   };
 
-  const onSubmit = async (selectedCandidates: number[]) => {
+  const onSubmit = async (selectedCandidates: string[]) => {
     if (preview) {
       console.log(
         `You have voted for ${selectedCandidates
           .map(
             (candidateId) =>
               session?.positions
-                .flatMap((position) => position.candidates)
-                .find((candidate) => candidate.id === candidateId).name,
+                ?.flatMap((position) => position.candidates)
+                .find((candidate) => candidate.id === candidateId)?.name,
           )
           .join(", ")}`,
       );
     } else {
-      console.log(
-        `You have voted for ${selectedCandidates
-          .map(
-            (candidateId) =>
-              session.positions
-                .flatMap((position: any) => position.candidates)
-                .find((candidate: any) => candidate.id === candidateId).name,
-          )
-          .join(", ")}`,
-      );
+      await vote({
+        sessionId: initialSessionId,
+        candidateIds: selectedCandidates,
+      });
     }
   };
 
@@ -121,40 +143,22 @@ export function VotingBallot({
       return;
     }
 
-    onSubmit();
+    void onSubmit(Object.values(selectedCandidates).flat());
     setSelectedCandidates({});
   };
-
-  useEffect(() => {
-    if (electionId) {
-      const channel = supabase.channel(`elections:${electionId}`);
-      setChannel(channel);
-    }
-  }, [electionId, supabase]);
-
-  useEffect(() => {
-    if (!preview && channel) {
-      channel.subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          void channel.track({ userId });
-        }
-      });
-    }
-  }, [channel, preview, userId]);
 
   return (
     <div className="flex flex-col items-center justify-center">
       <h1 className="text-2xl font-bold">{session?.name}</h1>
       <div className="grid grid-cols-1 gap-4">
-        {session?.positions.map((position: any) => (
+        {session?.positions.map((position) => (
           <Card key={position.id}>
             <CardHeader>
               <CardTitle>{position.name}</CardTitle>
-              <CardDescription>{position.description}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 gap-4">
-                {position.candidates.map((candidate: any) => (
+                {position.candidates.map((candidate) => (
                   <Card
                     key={candidate.id}
                     onClick={() => handleCardClick(position.id, candidate.id)}
@@ -166,7 +170,6 @@ export function VotingBallot({
                   >
                     <CardHeader>
                       <CardTitle>{candidate.name}</CardTitle>
-                      <CardDescription>{candidate.description}</CardDescription>
                     </CardHeader>
                   </Card>
                 ))}

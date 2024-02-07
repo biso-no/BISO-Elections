@@ -1,8 +1,9 @@
 "use client";
 
-import type { RealtimeChannel } from "@supabase/supabase-js";
+//import type { RealtimeChannel } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+
+//import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
 import {
   Table,
@@ -17,11 +18,12 @@ import { api } from "~/trpc/react";
 export function VoterTable({ electionId }: { electionId: string }) {
   const [onlineVoters, setOnlineVoters] = useState<string[]>([]);
   const { data: allVoters } = api.elections.voters.useQuery(electionId);
-  const [channel, setChannel] = useState<RealtimeChannel>();
+  // const [channel, setChannel] = useState<RealtimeChannel>();
 
-  const supabase = createClientComponentClient();
+  // const supabase = createClientComponentClient();
 
   //Create a channel for the election, and set the channel state
+  /*
   useEffect(() => {
     if (electionId) {
       const channel = supabase.channel(`elections:${electionId}`);
@@ -66,7 +68,7 @@ export function VoterTable({ electionId }: { electionId: string }) {
       };
     }
   }, [channel]);
-
+*/
   //Render the online voters table
   return (
     <Table>

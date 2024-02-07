@@ -1,5 +1,5 @@
 {
-  "name": "@acme/{{ name }}",
+  "name": "@acme/supa",
   "private": true,
   "version": "0.1.0",
   "exports": {
@@ -31,5 +31,8 @@
       "@acme/eslint-config/base"
     ]
   },
-  "prettier": "@acme/prettier-config"
+  "prettier": "@acme/prettier-config",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
 }
