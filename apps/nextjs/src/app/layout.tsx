@@ -10,6 +10,8 @@ import { Toaster } from "~/components/ui/toaster";
 import { TRPCReactProvider } from "~/trpc/react";
 import { Providers } from "./_components/providers";
 
+export const dynamic = "force-dynamic";
+
 const fontSans = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
@@ -17,17 +19,12 @@ const fontSans = Inter({
 
 export const metadata: Metadata = {
   title: "BISO Elections",
-  description: "Simple monorepo with shared backend for web & mobile apps",
+  description: "BISO Hosted Elections platform covering all campuses",
   openGraph: {
-    title: "T3 Turbo x Supabase",
-    description: "Simple monorepo with shared backend for web & mobile apps",
-    url: "https://github.com/supabase-community/create-t3-turbo",
-    siteName: "T3 Turbo x Supabase",
-  },
-  twitter: {
-    card: "summary_large_image",
-    site: "@jullerino",
-    creator: "@jullerino",
+    title: "BISO Elections",
+    description: "BISO Hosted Elections platform covering all campuses",
+    url: "https://github.com/MHEien/T3-Supa",
+    siteName: "BISO Elections",
   },
 };
 
