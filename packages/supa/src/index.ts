@@ -10,9 +10,16 @@ export const inviteVoter = async (email: string) => {
     console.error("error", user.error);
     throw new Error(user.error.message);
   }
+  console.log("user", user);
   if (user.data.length === 0) {
     console.log("Inviting user");
-    const { data, error } = await adminAuthClient.inviteUserByEmail(email);
+    const { data, error } = await adminAuthClient.inviteUserByEmail(email, {
+      data: {
+        role: "election_participant",
+      },
+    });
+    console.log("data", data);
+    console.log("error", error);
     return { data, error };
   }
 };

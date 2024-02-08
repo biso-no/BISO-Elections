@@ -96,20 +96,28 @@ export const votersRouter = createTRPCRouter({
   //There can only be one active session at a time. This query will return the active session for the election. The active session has status in_progress in database.
   activeSession: protectedProcedure
     .input(z.object({ id: z.string() }))
-    .query(({ ctx }) => {
-      return ctx.db.query.electionSession.findFirst({
-        where: eq(schema.electionSession.status, "in_progress"),
+    .query(({ ctx, input }) => {
+      return ctx.db.query.election.findFirst({
+        where: eq(schema.election.id, input.id),
         with: {
-          positions: {
+          sessions: {
+            where: eq(schema.electionSession.status, "in_progress"),
             columns: {
               id: true,
-              name: true,
             },
             with: {
-              candidates: {
+              positions: {
                 columns: {
                   id: true,
                   name: true,
+                },
+                with: {
+                  candidates: {
+                    columns: {
+                      id: true,
+                      name: true,
+                    },
+                  },
                 },
               },
             },

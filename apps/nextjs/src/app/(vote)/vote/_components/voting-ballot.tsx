@@ -29,7 +29,7 @@ interface VotingBallotProps {
 }
 
 export function VotingBallot({
-  initialSessionId,
+  initialSession,
   userId,
   electionId,
   disabled = false,
@@ -41,26 +41,30 @@ export function VotingBallot({
     Record<string, string[]>
   >({});
 
+  const [activeSession, setActiveSession] =
+    useState<RouterOutputs["voter"]["sessionById"]>(initialSession);
+
+  const utils = api.useUtils();
   const toast = useToast();
 
   const supabase = createClientComponentClient();
 
   const [channel, setChannel] = useState<RealtimeChannel>();
 
-  const [activeSessionId, setActiveSessionId] =
-    useState<string>(initialSessionId);
-
-  if (!initialSessionId) {
+  if (!activeSession) {
     throw new Error("sessionId is required");
   }
 
-  useEffect(() => {
-    console.log("Active session id", activeSessionId);
-  }, [activeSessionId]);
+  const { data: session } = api.voter.activeSession.useQuery(electionId);
 
-  const { data: session } = api.voter.sessionById.useQuery({
-    id: activeSessionId,
-  });
+  useEffect(() => {
+    //Every 5 seconds, we will refresh the session by invalidating the query
+    const interval = setInterval(() => {
+      void utils.voter.activeSession.invalidate();
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [electionId, utils]);
 
   const { mutateAsync: vote } = api.voter.vote.useMutation({
     onSuccess: () => {
@@ -112,7 +116,7 @@ export function VotingBallot({
         `You have voted for ${selectedCandidates
           .map(
             (candidateId) =>
-              session?.positions
+              activeSession?.positions
                 ?.flatMap((position) => position.candidates)
                 .find((candidate) => candidate.id === candidateId)?.name,
           )
@@ -120,7 +124,7 @@ export function VotingBallot({
       );
     } else {
       await vote({
-        sessionId: initialSessionId,
+        sessionId: initialSession.id,
         candidateIds: selectedCandidates,
       });
     }
@@ -161,7 +165,7 @@ export function VotingBallot({
     <div className="flex flex-col items-center justify-center">
       <h1 className="text-2xl font-bold">{session?.name}</h1>
       <div className="grid grid-cols-1 gap-4">
-        {session?.positions.map((position) => (
+        {activeSession?.positions.map((position) => (
           <Card key={position.id}>
             <CardHeader>
               <CardTitle>{position.name}</CardTitle>

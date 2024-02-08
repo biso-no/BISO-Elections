@@ -297,15 +297,33 @@ export const electionsRouter = createTRPCRouter({
             message: data?.error?.message,
           });
         }
-
-        return ctx.db
-          .insert(schema.electionVoter)
-          .values({
-            profileId: data.data.user.id,
-            electionId: input.electionId,
-            vote_weight: voter.vote_weight,
-          })
-          .returning();
+        if (data.data.user) {
+          //Create a new profile
+          const profile = await ctx.db
+            .insert(schema.profile)
+            .values({
+              id: data.data.user.id,
+              name: voter.name,
+              email: voter.email,
+              userRole: "election_participant",
+            })
+            .returning();
+          console.log("profile", profile);
+          if (!profile) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create profile",
+            });
+          }
+          return ctx.db
+            .insert(schema.electionVoter)
+            .values({
+              profileId: data.data.user.id,
+              electionId: input.electionId,
+              vote_weight: voter.vote_weight,
+            })
+            .returning();
+        }
       });
       return Promise.all(voters);
     }),

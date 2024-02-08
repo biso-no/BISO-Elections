@@ -1,9 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as z from "zod";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -22,6 +19,7 @@ import { api } from "~/trpc/react";
 
 interface InviteUsersProps {
   electionId: string;
+  onInvite: (voters: VoterInvitation[], electionId: string) => void;
 }
 
 interface VoterInvitation {
@@ -31,42 +29,17 @@ interface VoterInvitation {
   vote_weight: number;
 }
 
-export function InviteUsers({ electionId }: InviteUsersProps) {
+export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
   //A button that opens a dialog. In the dialog there are 3 inputs per row. Include a button to add more rows. Each row represent a user to invite.
   //When the user clicks the invite button, the users are invited and the dialog closes.
 
+  const utils = api.useUtils();
   const toast = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
   const [voters, setVoters] = useState<VoterInvitation[]>([
     { name: "", email: "", electionId: "", vote_weight: 0 },
   ]);
-
-  const { mutateAsync: inviteVoters } =
-    api.elections.createMultipleVoters.useMutation({
-      onSuccess: () => {
-        toast.toast({
-          title: "Voters invited",
-          description: "The voters have been invited.",
-          variant: "default",
-        });
-        setIsOpen(false);
-      },
-      onError: (error) => {
-        toast.toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      },
-    });
-
-  const invite = async (voters: VoterInvitation[], electionId: string) => {
-    await inviteVoters({
-      electionId,
-      voters,
-    });
-  };
 
   const addRow = () => {
     setVoters((prevVoters) => [
@@ -126,7 +99,7 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
                   setVoters((prevVoters) =>
                     prevVoters.map((v, i) =>
                       i === index
-                        ? { ...v, voteWeight: parseInt(e.target.value) }
+                        ? { ...v, vote_weight: parseInt(e.target.value) } // Update property name to vote_weight
                         : v,
                     ),
                   )
@@ -141,7 +114,7 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
             <Button
-              onClick={() => invite(voters, electionId)}
+              onClick={() => onInvite(voters, electionId)}
               disabled={voters.length === 0}
             >
               Invite
