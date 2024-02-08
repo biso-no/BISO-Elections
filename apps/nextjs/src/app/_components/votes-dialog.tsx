@@ -24,12 +24,14 @@ import {
   TableRow,
 } from "~/components/ui/table";
 import { api } from "~/trpc/react";
+import { NotYetVoted } from "./not-yet-voted";
 
 interface VotesDialog {
   sessionId: string;
+  electionId: string;
 }
 
-export function VotesDialog({ sessionId }: VotesDialog) {
+export function VotesDialog({ sessionId, electionId }: VotesDialog) {
   const utils = api.useUtils();
 
   const { data: session } = api.elections.session.useQuery(sessionId);
@@ -66,36 +68,43 @@ export function VotesDialog({ sessionId }: VotesDialog) {
           <DialogTitle>{session?.name}</DialogTitle>
           <DialogClose />
         </DialogHeader>
-        {positions?.map((position) => (
-          <Table key={position.id}>
-            <TableCaption>{position.name}</TableCaption>
-            <TableHeader>
-              <TableRow key={position.id} className="flex-row">
-                <TableHead>Candidate</TableHead>
-                <TableHead>Votes</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {position.candidates.map((candidate) => (
-                <TableRow key={candidate.id}>
-                  <TableCell>{candidate.name}</TableCell>
-                  <TableCell>{candidate.votes.length}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-            <TableFooter>
-              <TableRow>
-                <TableCell>Total</TableCell>
-                <TableCell>
-                  {position.candidates.reduce(
-                    (acc, candidate) => acc + candidate.votes.length,
-                    0,
-                  )}
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          </Table>
-        ))}
+        <div className="flex space-x-4">
+          <div>
+            {positions?.map((position) => (
+              <Table key={position.id}>
+                <TableCaption>{position.name}</TableCaption>
+                <TableHeader>
+                  <TableRow key={position.id} className="flex-row">
+                    <TableHead>Candidate</TableHead>
+                    <TableHead>Votes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {position.candidates.map((candidate) => (
+                    <TableRow key={candidate.id}>
+                      <TableCell>{candidate.name}</TableCell>
+                      <TableCell>{candidate.votes.length}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+                <TableFooter>
+                  <TableRow>
+                    <TableCell>Total</TableCell>
+                    <TableCell>
+                      {position.candidates.reduce(
+                        (acc, candidate) => acc + candidate.votes.length,
+                        0,
+                      )}
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              </Table>
+            ))}
+          </div>
+          <div>
+            <NotYetVoted sessionId={sessionId} electionId={electionId} />
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

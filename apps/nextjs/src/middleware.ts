@@ -5,7 +5,10 @@ import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
-  if (req.nextUrl.pathname.startsWith("/_next")) {
+  if (
+    req.nextUrl.pathname.startsWith("/_next") ||
+    req.nextUrl.pathname.startsWith("/api")
+  ) {
     return res;
   }
 

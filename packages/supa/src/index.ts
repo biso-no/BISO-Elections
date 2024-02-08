@@ -17,6 +17,7 @@ export const inviteVoter = async (email: string) => {
       data: {
         role: "election_participant",
       },
+      redirectTo: "http://localhost:3001/auth/callback",
     });
     console.log("data", data);
     console.log("error", error);

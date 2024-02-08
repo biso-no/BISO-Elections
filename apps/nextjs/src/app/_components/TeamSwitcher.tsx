@@ -41,7 +41,7 @@ export function TeamSwitcher({ className }: TeamSwitcherProps) {
 
   const pathname = usePathname();
 
-  const electionId = pathname.split("/")[1];
+  const electionId = pathname.split("/")[1] || ""; // Ensure electionId is always a string
 
   if (!electionId) {
     console.log("No election id found");

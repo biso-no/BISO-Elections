@@ -69,7 +69,7 @@ export function CreateElection({ onClose }: CreateElectionDialogProps) {
         });
         console.log("data: ", data);
         await utils.elections.all.invalidate();
-        router.push(`/${data[0].id}`);
+        router.push(`/${data[0]?.id}`);
       },
 
       async onError() {

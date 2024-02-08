@@ -56,6 +56,8 @@ const candidateFormSchema = z.object({
   name: z.string().min(1),
 });
 
+type Status = "not_started" | "in_progress" | "completed";
+
 export default function SessionPage() {
   const electionId = useElectionId();
 
@@ -270,29 +272,19 @@ export default function SessionPage() {
       },
     });
 
-  const onSessionToggle = async (sessionId: string, currentStatus: string) => {
-    // Deactivate all sessions
-    sessions?.forEach(async (session) => {
-      if (session.status === "in_progress") {
-        await updateSession({ id: session.id, status: "completed" });
+  const onSessionToggle = async (sessionId: string, currentStatus: Status) => {
+    // Check if sessions is defined
+    if (sessions) {
+      // Deactivate all sessions
+      for (const session of sessions) {
+        if (session.status === "in_progress") {
+          await updateSession({
+            id: sessionId,
+            status: currentStatus,
+          });
+        }
       }
-    });
-
-    // Activate or deactivate the current session
-    const newStatus =
-      currentStatus === "not_started" ? "in_progress" : "completed";
-    await updateSession({ id: sessionId, status: newStatus });
-  };
-
-  //A helper function that returns the id and name of the candidates with the given session.
-  const getCandidates = (session: any) => {
-    const candidates: any[] = [];
-    session.positions.forEach((position: any) => {
-      position.candidates.forEach((candidate: any) => {
-        candidates.push({ id: candidate.id, name: candidate.name });
-      });
-    });
-    return candidates;
+    }
   };
 
   return (
@@ -442,7 +434,10 @@ export default function SessionPage() {
                         ? "Deactivate"
                         : "Activate"}
                     </Button>
-                    <VotesDialog sessionId={session.id} />
+                    <VotesDialog
+                      sessionId={session.id}
+                      electionId={electionId}
+                    />
                   </div>
                   {/*Preview button that opens a dialog with the voting ballot*/}
                   {session.type === "position" && (

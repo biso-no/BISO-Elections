@@ -347,7 +347,7 @@ export const electionsRouter = createTRPCRouter({
   }),
   votes: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionVote.findMany({
-      where: eq(schema.electionVote.electionId, input),
+      where: eq(schema.electionVote.sessionId, input),
     });
   }),
   votesByCandidateId: adminProcedure
@@ -405,5 +405,31 @@ export const electionsRouter = createTRPCRouter({
       return ctx.db
         .delete(schema.electionCandidate)
         .where(eq(schema.electionCandidate.id, input));
+    }),
+  //A procedure to get all voters who have not yet voted for a given session.
+  votersWhoHaveNotVoted: protectedProcedure
+    .input(
+      z.object({
+        electionId: z.string(),
+        sessionId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const voters = await ctx.db.query.electionVoter.findMany({
+        where: eq(schema.electionVoter.electionId, input.electionId),
+        with: {
+          profile: {
+            columns: {
+              name: true,
+            },
+          },
+          votes: {
+            where: eq(schema.electionVote.sessionId, input.sessionId),
+          },
+        },
+      });
+      const filteredVoters = voters.filter((voter) => voter.votes.length === 0);
+      console.log("filteredVoters", filteredVoters);
+      return filteredVoters;
     }),
 });
