@@ -2,9 +2,14 @@ version: "3.9"
 services:
   app:
     platform: "linux/amd64"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     build:
       context: .
-      dockerfile: ./apps/nextjs/Dockerfile
+      dockerfile: ./Dockerfile
       args:
         NEXT_PUBLIC_CLIENTVAR: "clientvar"
     working_dir: /app
@@ -12,10 +17,11 @@ services:
       - "3000:3000"
     image: t3-app
     environment:
+      - HOSTNAME=0.0.0.0
       - POSTGRES_URL=${POSTGRES_URL}
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
-      - NOVU_BACKEND_URL=${NOVU_BACKEND_URL}
+      - NOVU_BACKEND_URL=${NOVU_API_URL}
       - NOVU_API_KEY=${NOVU_API_KEY}
       - NOVU_APP_ID=${NOVU_APP_ID}
       - NEXT_PUBLIC_URL=${NEXT_PUBLIC_URL}
