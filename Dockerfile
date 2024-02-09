@@ -38,8 +38,8 @@ RUN CI=true SKIP_ENV_VALIDATION=true turbo run build --filter=@acme/nextjs...
 FROM base AS runner
 WORKDIR /app
 
-EXPOSE 3015
-ENV PORT 3015
+EXPOSE 3000
+ENV PORT 3000
 
 ENV NODE_ENV production
 ENV HOSTNAME localhost

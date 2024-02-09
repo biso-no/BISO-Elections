@@ -3,7 +3,7 @@ services:
   app:
     platform: "linux/amd64"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3015"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -14,7 +14,7 @@ services:
         NEXT_PUBLIC_CLIENTVAR: "clientvar"
     working_dir: /app
     ports:
-      - "3015:3015"
+      - "3015:3000"
     image: t3-app
     environment:
       - HOSTNAME=0.0.0.0
