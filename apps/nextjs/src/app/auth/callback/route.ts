@@ -70,5 +70,5 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.redirect(url.origin);
+  return NextResponse.redirect(process.env.NEXT_PUBLIC_URL!);
 }

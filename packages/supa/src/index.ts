@@ -17,7 +17,7 @@ export const inviteVoter = async (email: string) => {
       data: {
         role: "election_participant",
       },
-      redirectTo: "http://localhost:3001/auth/callback",
+      redirectTo: `https://${process.env.VERCEL_URL}/auth/callback`,
     });
     console.log("data", data);
     console.log("error", error);

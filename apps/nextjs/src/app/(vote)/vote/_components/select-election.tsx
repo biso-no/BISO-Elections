@@ -16,6 +16,7 @@ import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
 import { useElectionId } from "~/lib/hooks/useElectionId";
 import { api } from "~/trpc/react";
+import type { RouterOutputs } from "@acme/api";
 
 interface SelectElection {
   elections: RouterOutputs["voter"]["all"];

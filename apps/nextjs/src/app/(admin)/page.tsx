@@ -3,9 +3,9 @@ import { DashboardQuickLinks } from "~/app/_components/QuickLinks";
 
 export default function DashboardPage() {
   return (
-    <>
+    <div>
       <DashboardStatistics />
       <DashboardQuickLinks />
-    </>
+    </div>
   );
 }
