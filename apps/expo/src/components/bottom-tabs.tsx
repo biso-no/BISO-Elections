@@ -5,6 +5,9 @@ export function BottomTabs() {
   return (
     <DefaultTabs
       screenOptions={{
+        headerStyle: {
+          backgroundColor: "#18181A",
+        },
         tabBarStyle: {
           backgroundColor: "#18181A",
         },
