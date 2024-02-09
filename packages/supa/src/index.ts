@@ -1,26 +1,33 @@
-import { adminAuthClient, databaseClient } from "../index";
+import { adminAuthClient } from "../index";
 
-export const inviteVoter = async (email: string) => {
-  //Check if user exist, if not invite
-  const user = await databaseClient
-    .from("profile")
-    .select("*")
-    .eq("email", email);
-  if (user.error) {
-    console.error("error", user.error);
-    throw new Error(user.error.message);
+export const inviteVoters = async (emails: string[]) => {
+  for (const email of emails) {
+    const { error, data } = await adminAuthClient.inviteUserByEmail(email);
+    if (error) {
+      console.error("Error inviting user:", error);
+    }
+    if (data.user) {
+      const { data: updateUserData, error: updateUserError } =
+        await adminAuthClient.updateUserById(data.user.id, {
+          app_metadata: {
+            roles: ["election_participant"],
+          },
+        });
+      if (updateUserError) {
+        console.error("Error updating user:", updateUserError);
+      }
+    }
   }
-  console.log("user", user);
-  if (user.data.length === 0) {
-    console.log("Inviting user");
-    const { data, error } = await adminAuthClient.inviteUserByEmail(email, {
-      data: {
-        role: "election_participant",
-      },
-      redirectTo: `https://${process.env.VERCEL_URL}/auth/callback`,
-    });
-    console.log("data", data);
-    console.log("error", error);
-    return { data, error };
+};
+
+export const changeRole = async (userId: string, role: string) => {
+  const { data, error } = await adminAuthClient.updateUserById(userId, {
+    app_metadata: {
+      roles: [role],
+    },
+  });
+  if (error) {
+    console.error("Error changing user role:", error);
   }
+  return data;
 };

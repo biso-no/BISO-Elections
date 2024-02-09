@@ -3,28 +3,27 @@ import { NextResponse } from "next/server";
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 
 export async function middleware(req: NextRequest) {
-  const res = NextResponse.next();
-
-  if (
-    req.nextUrl.pathname.startsWith("/_next") ||
-    req.nextUrl.pathname.startsWith("/api")
-  ) {
-    return res;
+  // Bypass middleware for Next.js internal requests
+  if (req.nextUrl.pathname.startsWith("/_next")) {
+    return NextResponse.next();
   }
 
+  const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
   const { data } = await supabase.auth.getSession();
 
-  if (data.session?.user.user_metadata?.role === "admin") {
-    return NextResponse.next();
-  } else if (
-    data.session?.user.user_metadata?.role === "election_participant" &&
-    !req.nextUrl.pathname.startsWith("/vote")
-  ) {
-    return NextResponse.redirect(process.env.NEXT_PUBLIC_URL + "/vote");
-  } else if (!data.session && !req.nextUrl.pathname.startsWith("/auth")) {
-    return NextResponse.redirect(process.env.NEXT_PUBLIC_URL + "/auth/login");
+  const isAdmin = data?.session?.user.app_metadata?.roles?.includes("admin");
+
+  // Redirect to login if there is no session and the request is not for the auth pages
+  if (!data.session && !req.nextUrl.pathname.startsWith("/auth")) {
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_URL}/auth/login`);
   }
 
+  // Redirect non-admin users with a session to the vote page, unless they are already there
+  if (data?.session && !isAdmin && !req.nextUrl.pathname.startsWith("/vote")) {
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_URL}/vote`);
+  }
+
+  // Admin users and requests to auth pages pass through
   return res;
 }
