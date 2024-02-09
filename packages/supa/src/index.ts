@@ -1,23 +1,24 @@
 import { adminAuthClient } from "../index";
 
-export const inviteVoters = async (emails: string[]) => {
-  for (const email of emails) {
-    const { error, data } = await adminAuthClient.inviteUserByEmail(email);
-    if (error) {
-      console.error("Error inviting user:", error);
-    }
-    if (data.user) {
-      const { data: updateUserData, error: updateUserError } =
-        await adminAuthClient.updateUserById(data.user.id, {
-          app_metadata: {
-            roles: ["election_participant"],
-          },
-        });
-      if (updateUserError) {
-        console.error("Error updating user:", updateUserError);
-      }
+export const inviteVoter = async (email: string) => {
+  const { error, data } = await adminAuthClient.inviteUserByEmail(email, {
+    redirectTo: "http://localhost:3000/auth/callback",
+  });
+  if (error) {
+    console.error("Error inviting user:", error);
+  }
+  if (data.user) {
+    const { data: updateUserData, error: updateUserError } =
+      await adminAuthClient.updateUserById(data.user.id, {
+        app_metadata: {
+          roles: ["election_participant"],
+        },
+      });
+    if (updateUserError) {
+      console.error("Error updating user:", updateUserError);
     }
   }
+  return { data, error };
 };
 
 export const changeRole = async (userId: string, role: string) => {

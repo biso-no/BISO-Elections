@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -95,8 +96,18 @@ export function AuthForm() {
           <Button
             onClick={() => signInWithAzure()}
             className="w-full justify-center"
+            variant="outline"
           >
-            Sign in with Azure
+            <div className="flex items-center justify-center">
+              <Image
+                src="/logos/logo-light.svg"
+                alt="Azure"
+                width={24}
+                height={24}
+                className="mr-2"
+              />
+              Sign in with Azure
+            </div>
           </Button>
         </div>
       </CardContent>
