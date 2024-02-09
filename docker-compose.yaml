@@ -3,7 +3,7 @@ services:
   app:
     platform: "linux/amd64"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: ["CMD", "curl", "-f", "http://localhost:3015"]
       interval: 30s
       timeout: 10s
       retries: 5
