@@ -23,6 +23,7 @@ export function ProfileDropdown({ user }) {
   const onSignOut = async () => {
     console.log("signing out");
     const response = await signOut();
+    router.push("/auth/login");
     toast.toast({
       title: "Signed out",
       description: response.error

@@ -289,20 +289,20 @@ export const electionsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       //For each voter, check if their profile exists, if not, create it. Then create the voter
       const voters = input.voters.map(async (voter) => {
-        const data = await inviteVoter(voter.email);
+        const { data, error } = await inviteVoter(voter.email);
 
-        if (!data?.data.user) {
+        if (!data?.user) {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
-            message: data?.error?.message,
+            message: error?.message,
           });
         }
-        if (data.data.user) {
+        if (data.user) {
           //Create a new profile
           const profile = await ctx.db
             .insert(schema.profile)
             .values({
-              id: data.data.user.id,
+              id: data.user.id,
               name: voter.name,
               email: voter.email,
               userRole: "election_participant",
@@ -318,7 +318,7 @@ export const electionsRouter = createTRPCRouter({
           return ctx.db
             .insert(schema.electionVoter)
             .values({
-              profileId: data.data.user.id,
+              profileId: data.user.id,
               electionId: input.electionId,
               vote_weight: voter.vote_weight,
             })
