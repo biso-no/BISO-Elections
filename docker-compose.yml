@@ -1,0 +1,21 @@
+version: "3.9"
+services:
+  app:
+    platform: "linux/amd64"
+    build:
+      context: .
+      dockerfile: ./apps/nextjs/Dockerfile
+      args:
+        NEXT_PUBLIC_CLIENTVAR: "clientvar"
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    image: t3-app
+    environment:
+      - POSTGRES_URL=${POSTGRES_URL}
+      - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+      - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      - NOVU_BACKEND_URL=${NOVU_BACKEND_URL}
+      - NOVU_API_KEY=${NOVU_API_KEY}
+      - NOVU_APP_ID=${NOVU_APP_ID}
+      - NEXT_PUBLIC_URL=${NEXT_PUBLIC_URL}
