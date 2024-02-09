@@ -12,7 +12,7 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res });
   const { data } = await supabase.auth.getSession();
 
-  const role = data?.session?.user.user_metadata?.role;
+  const isAdmin = data?.session?.user.app_metadata?.roles?.includes("admin");
 
   // Redirect to login if there is no session and the request is not for the auth pages
   if (!data.session && !req.nextUrl.pathname.startsWith("/auth")) {
@@ -20,11 +20,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // Redirect non-admin users with a session to the vote page, unless they are already there
-  if (
-    data?.session &&
-    role !== "admin" &&
-    !req.nextUrl.pathname.startsWith("/vote")
-  ) {
+  if (data?.session && !isAdmin && !req.nextUrl.pathname.startsWith("/vote")) {
     return NextResponse.redirect(`${process.env.NEXT_PUBLIC_URL}/vote`);
   }
 

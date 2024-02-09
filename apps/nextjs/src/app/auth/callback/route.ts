@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
         const { data: updateUserData, error: updateUserError } =
           await supabase.auth.updateUser({
             data: {
-              role: "admin",
+              role: "election_participant",
             },
           });
 
