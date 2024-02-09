@@ -17,6 +17,7 @@ services:
       - "3015:3000"
     image: t3-app
     environment:
+      - HOSTNAME=0.0.0.0
       - POSTGRES_URL=${POSTGRES_URL}
       - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
