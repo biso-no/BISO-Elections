@@ -14,7 +14,7 @@ services:
         NEXT_PUBLIC_CLIENTVAR: "clientvar"
     working_dir: /app
     ports:
-      - "3015:3000"
+      - "3015:3015"
     image: t3-app
     environment:
       - HOSTNAME=0.0.0.0
