@@ -1,4 +1,13 @@
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
+import { z } from "zod";
+
+import { changeRole } from "@acme/supa";
+
+import {
+  adminProcedure,
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "../trpc";
 
 export const authRouter = createTRPCRouter({
   me: publicProcedure.query(({ ctx }) => {

@@ -7,7 +7,7 @@ import {
 
 export function NotificationCenter() {
   return (
-    <PopoverNotificationCenter colorScheme="light">
+    <PopoverNotificationCenter colorScheme="dark">
       {({ unseenCount }) => <NotificationBell unseenCount={unseenCount} />}
     </PopoverNotificationCenter>
   );

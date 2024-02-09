@@ -20,7 +20,7 @@ const bottomNavItems = [
   },
   {
     name: "Users & Access",
-    href: "/users-access",
+    href: "/users",
     icon: UsersIcon, // Replace with your icon
   },
 ];
