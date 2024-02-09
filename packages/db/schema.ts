@@ -135,15 +135,14 @@ export const election = pgTable("election", {
     .notNull()
     .$default(() => sql`CURRENT_TIMESTAMP`),
   campus: campus("campus").notNull(),
-  createdBy: uuid("created_by"),
+  createdBy: uuid("created_by")
+    .notNull()
+    .references(() => profile.id, { onDelete: "cascade" }),
 });
 
 export const electionRelations = relations(election, ({ many, one }) => ({
-  positions: many(electionPosition),
   sessions: many(electionSession),
-  candidates: many(electionCandidate),
   voters: many(electionVoter),
-  votes: many(electionVote),
   createdBy: one(profile, {
     fields: [election.createdBy],
     references: [profile.id],
@@ -155,10 +154,10 @@ export const electionSession = pgTable("election_session", {
     .primaryKey()
     .default(sql`uuid_generate_v4()`),
   name: varchar("name", { length: 256 }).notNull(),
-  description: varchar("description", { length: 256 }).notNull(),
+  description: varchar("description", { length: 256 }),
   electionId: varchar("election_id", { length: 256 })
     .notNull()
-    .references(() => election.id),
+    .references(() => election.id, { onDelete: "cascade" }),
   type: electionSessionType("type").notNull(),
   status: electionSessionStatus("status").notNull(),
 });
@@ -169,6 +168,7 @@ export const electionSessionRelations = relations(
     // existing relations...
     positions: many(electionPosition),
     statuteChanges: many(electionStatuteChange),
+    votes: many(electionVote),
     election: one(election, {
       fields: [electionSession.electionId],
       references: [election.id],
@@ -177,13 +177,14 @@ export const electionSessionRelations = relations(
 );
 
 export const electionPosition = pgTable("election_position", {
-  id: varchar("id", { length: 256 })
+  id: uuid("id")
     .primaryKey()
     .default(sql`uuid_generate_v4()`),
   name: varchar("name", { length: 256 }).notNull(),
   description: varchar("description", { length: 256 }),
   sessionId: varchar("session_id", { length: 256 }).references(
     () => electionSession.id,
+    { onDelete: "cascade" },
   ),
 });
 
@@ -202,19 +203,20 @@ export const electionCandidate = pgTable("election_candidate", {
   id: varchar("id", { length: 256 })
     .primaryKey()
     .default(sql`uuid_generate_v4()`),
-  electionPositionId: varchar("election_position_id", { length: 256 })
+  electionPositionId: uuid("election_position_id")
     .notNull()
-    .references(() => electionPosition.id),
+    .references(() => electionPosition.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 256 }).notNull(),
 });
 
 export const electionCandidateRelations = relations(
   electionCandidate,
-  ({ one }) => ({
+  ({ one, many }) => ({
     position: one(electionPosition, {
       fields: [electionCandidate.electionPositionId],
       references: [electionPosition.id],
     }),
+    votes: many(electionVote),
   }),
 );
 
@@ -224,38 +226,62 @@ export const electionVoter = pgTable("election_voter", {
     .default(sql`uuid_generate_v4()`),
   electionId: varchar("election_id", { length: 256 })
     .notNull()
-    .references(() => election.id),
+    .references(() => election.id, { onDelete: "cascade" }),
   profileId: uuid("profile_id")
     .notNull()
-    .references(() => profile.id),
+    .references(() => profile.id, { onDelete: "cascade" }),
   vote_weight: integer("vote_weight").notNull(),
 });
 
-export const electionVoterRelations = relations(electionVoter, ({ one }) => ({
-  profile: one(profile, {
-    fields: [electionVoter.profileId],
-    references: [profile.id],
+export const electionVoterRelations = relations(
+  electionVoter,
+  ({ one, many }) => ({
+    profile: one(profile, {
+      fields: [electionVoter.profileId],
+      references: [profile.id],
+    }),
+    election: one(election, {
+      fields: [electionVoter.electionId],
+      references: [election.id],
+    }),
+    votes: many(electionVote),
   }),
-  election: one(election, {
-    fields: [electionVoter.electionId],
-    references: [election.id],
-  }),
-}));
+);
 
 export const electionVote = pgTable("election_vote", {
-  id: varchar("id", { length: 256 })
+  id: uuid("id")
     .primaryKey()
     .default(sql`uuid_generate_v4()`),
-  electionId: varchar("election_id", { length: 256 })
-    .notNull()
-    .references(() => election.id),
   profileId: uuid("profile_id")
     .notNull()
     .references(() => profile.id),
+  sessionId: varchar("session_id", { length: 256 }).references(
+    () => electionSession.id,
+    { onDelete: "cascade" },
+  ),
   electionCandidateId: varchar("election_candidate_id", { length: 256 })
     .notNull()
-    .references(() => electionCandidate.id),
+    .references(() => electionCandidate.id, { onDelete: "cascade" }),
 });
+
+export const electionVoteRelations = relations(electionVote, ({ one }) => ({
+  profile: one(profile, {
+    fields: [electionVote.profileId],
+    references: [profile.id],
+  }),
+  candidate: one(electionCandidate, {
+    fields: [electionVote.electionCandidateId],
+    references: [electionCandidate.id],
+  }),
+  session: one(electionSession, {
+    fields: [electionVote.sessionId],
+    references: [electionSession.id],
+  }),
+  voter: one(electionVoter, {
+    fields: [electionVote.profileId],
+    references: [electionVoter.profileId],
+  }),
+}));
 
 export const electionAdmin = pgTable("election_admin", {
   id: varchar("id", { length: 256 })
@@ -280,11 +306,12 @@ export const electionStatuteChange = pgTable("statute_change", {
 
 export const electionStatuteChangeRelations = relations(
   electionStatuteChange,
-  ({ one }) => ({
+  ({ one, many }) => ({
     session: one(electionSession, {
       fields: [electionStatuteChange.sessionId],
       references: [electionSession.id],
     }),
+    votes: many(electionVote),
   }),
 );
 

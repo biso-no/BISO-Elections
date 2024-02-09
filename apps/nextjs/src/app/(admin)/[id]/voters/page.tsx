@@ -1,6 +1,7 @@
-import { Table } from "~/app/_components/Table";
+import { VoterTable } from "~/app/_components/voter-table";
 import { api } from "~/trpc/server";
 import { InviteUsers } from "./_components/invite-button";
+import { Table } from "./_components/voter-table";
 
 export default async function AdminVotersPage({
   params,
@@ -20,8 +21,7 @@ export default async function AdminVotersPage({
 
   return (
     <div className="container mx-auto">
-      <InviteUsers electionId={params.id} />
-      <Table data={tableData} />
+      <Table data={tableData} electionId={params.id} />
     </div>
   );
 }

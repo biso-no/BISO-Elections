@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { desc, eq, schema } from "@acme/db";
-import { adminAuthClient } from "@acme/supa";
+import { inviteVoter } from "@acme/supa";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -164,14 +164,28 @@ export const electionsRouter = createTRPCRouter({
         })
         .where(eq(schema.electionSession.id, input.id));
     }),
-  candidates: protectedProcedure
-    .input(z.string())
-    .query(async ({ ctx, input }) => {
-      return ctx.db.query.electionCandidate.findMany({
-        where: eq(schema.electionCandidate.electionPositionId, input),
-      });
-    }),
-  createCandidate: protectedProcedure
+  positions: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionPosition.findMany({
+      where: eq(schema.electionPosition.sessionId, input),
+      with: {
+        candidates: {
+          with: {
+            votes: {
+              columns: {
+                id: true,
+                electionCandidateId: true,
+              },
+            },
+          },
+          columns: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+    });
+  }),
+  createCandidate: adminProcedure
     .input(
       z.object({
         electionPositionId: z.string(),
@@ -240,10 +254,15 @@ export const electionsRouter = createTRPCRouter({
       });
 
       if (!profile) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Profile not found",
-        });
+        //Create a new profile
+        await ctx.db
+          .insert(schema.profile)
+          .values({
+            name: input.name,
+            email: "no-email",
+            userRole: "election_participant",
+          })
+          .returning();
       }
       return ctx.db
         .insert(schema.electionVoter)
@@ -254,86 +273,100 @@ export const electionsRouter = createTRPCRouter({
         })
         .returning();
     }),
-  inviteVoters: protectedProcedure
+  createMultipleVoters: protectedProcedure
     .input(
       z.object({
         electionId: z.string(),
-        users: z.array(
+        voters: z.array(
           z.object({
-            email: z.string().email(),
-            name: z.string().min(1),
-            voteWeight: z.number().min(1),
+            name: z.string(),
+            email: z.string(),
+            vote_weight: z.number(),
           }),
         ),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      //For each email, invite the user, then create a voter from the user ID.
-      const users = await Promise.all(
-        input.users.map(async (user) => {
-          const { data } = await adminAuthClient.generateLink({
-            type: "magiclink",
-            email: user.email,
-            options: {
-              redirectTo: "http://localhost:3001/auth/callback",
-            },
+      //For each voter, check if their profile exists, if not, create it. Then create the voter
+      const voters = input.voters.map(async (voter) => {
+        const data = await inviteVoter(voter.email);
+
+        if (!data?.data.user) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: data?.error?.message,
           });
-          console.log("Data: ", data);
-          const profile = await ctx.db.query.profile.findFirst({
-            where: eq(schema.profile.email, user.email),
-          });
-
-          if (!profile && data.user) {
-            const newProfile = await ctx.db
-              .insert(schema.profile)
-              .values({
-                id: data.user.id,
-                email: user.email,
-                name: user.name,
-                userRole: "election_participant",
-              })
-              .returning();
-
-            console.log("New Profile: ", newProfile);
+        }
+        if (data.data.user) {
+          //Create a new profile
+          const profile = await ctx.db
+            .insert(schema.profile)
+            .values({
+              id: data.data.user.id,
+              name: voter.name,
+              email: voter.email,
+              userRole: "election_participant",
+            })
+            .returning();
+          console.log("profile", profile);
+          if (!profile) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to create profile",
+            });
           }
-
-          if (data.user) {
-            return ctx.db
-              .insert(schema.electionVoter)
-              .values({
-                profileId: data.user.id,
-                electionId: input.electionId,
-                vote_weight: user.voteWeight,
-              })
-              .returning();
-          }
-        }),
-      );
-      return users;
+          return ctx.db
+            .insert(schema.electionVoter)
+            .values({
+              profileId: data.data.user.id,
+              electionId: input.electionId,
+              vote_weight: voter.vote_weight,
+            })
+            .returning();
+        }
+      });
+      return Promise.all(voters);
     }),
-  votes: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
-    return ctx.db.query.electionVote.findMany({
-      where: eq(schema.electionVote.electionId, input),
+  session: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionSession.findFirst({
+      where: eq(schema.electionSession.id, input),
+      with: {
+        positions: {
+          with: {
+            candidates: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        statuteChanges: true,
+      },
     });
   }),
-  createVote: protectedProcedure
-    .input(
-      z.object({
-        electionId: z.string(),
-        profileId: z.string(),
-        electionCandidateId: z.string(),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      // Check if the user is an admin of the election
-      return ctx.db
-        .insert(schema.electionVote)
-        .values({
-          electionId: input.electionId,
-          electionCandidateId: input.electionCandidateId,
-          profileId: input.profileId,
-        })
-        .returning();
+  votes: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionVote.findMany({
+      where: eq(schema.electionVote.sessionId, input),
+    });
+  }),
+  votesByCandidateId: adminProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      return ctx.db.query.electionVote.findMany({
+        where: eq(schema.electionVote.electionCandidateId, input),
+        columns: {
+          electionCandidateId: true,
+        },
+        with: {
+          candidate: {
+            columns: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
     }),
   admins: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionAdmin.findMany({
@@ -372,5 +405,31 @@ export const electionsRouter = createTRPCRouter({
       return ctx.db
         .delete(schema.electionCandidate)
         .where(eq(schema.electionCandidate.id, input));
+    }),
+  //A procedure to get all voters who have not yet voted for a given session.
+  votersWhoHaveNotVoted: protectedProcedure
+    .input(
+      z.object({
+        electionId: z.string(),
+        sessionId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const voters = await ctx.db.query.electionVoter.findMany({
+        where: eq(schema.electionVoter.electionId, input.electionId),
+        with: {
+          profile: {
+            columns: {
+              name: true,
+            },
+          },
+          votes: {
+            where: eq(schema.electionVote.sessionId, input.sessionId),
+          },
+        },
+      });
+      const filteredVoters = voters.filter((voter) => voter.votes.length === 0);
+      console.log("filteredVoters", filteredVoters);
+      return filteredVoters;
     }),
 });

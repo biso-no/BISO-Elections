@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "~/components/ui/button";
@@ -12,15 +12,24 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
+import { useElectionId } from "~/lib/hooks/useElectionId";
 import { api } from "~/trpc/react";
+import type { RouterOutputs } from "@acme/api";
 
-export const SelectElection = () => {
+interface SelectElection {
+  elections: RouterOutputs["voter"]["all"];
+}
+
+export function SelectElection({ elections }: SelectElection) {
   const toast = useToast();
 
   const router = useRouter();
 
-  const { data: elections } = api.voter.all.useQuery();
+  useEffect(() => {
+    console.log("Elections: ", elections);
+  }, [elections]);
 
   useEffect(() => {
     if (elections?.length === 1) {
@@ -30,12 +39,12 @@ export const SelectElection = () => {
 
   const onSelect = async (electionId: string) => {
     try {
-      console.log(electionId);
+      console.log("Election ID: ", electionId);
       router.push(`/vote/${electionId}`);
     } catch (error) {
       toast.toast({
         title: "Error",
-        description: "Something went wrong",
+        description: error.message || "Something went wrong",
         variant: "destructive",
       });
     }
@@ -64,4 +73,4 @@ export const SelectElection = () => {
       </div>
     </div>
   );
-};
+}

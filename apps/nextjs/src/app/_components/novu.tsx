@@ -15,9 +15,9 @@ export function NovuProvider(props: Props) {
     <>
       <DefaultNovuProvider
         subscriberId={data?.id}
-        applicationIdentifier="ZRR2BCecmAIx"
-        backendUrl="https://api-vccocww.biso.no"
-        socketUrl="https://ws-vccocww.biso.no"
+        applicationIdentifier={process.env.NOVU_APP_ID!}
+        backendUrl={process.env.NOVU_API_URL}
+        socketUrl={process.env.NOVU_SOCKET_URL}
       >
         {props.children}
       </DefaultNovuProvider>

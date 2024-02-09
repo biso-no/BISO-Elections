@@ -2,13 +2,15 @@ import { api } from "~/trpc/server";
 import { SelectElection } from "./_components/select-election";
 
 export default async function VotePage() {
-  const me = await api.auth.me.query();
+  const elections = await api.voter.all.query();
 
-  console.log(me);
+  if (!elections) {
+    return <div>No elections found</div>;
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-2">
-      <SelectElection />
+      <SelectElection elections={elections} />
     </div>
   );
 }

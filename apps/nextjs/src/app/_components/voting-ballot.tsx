@@ -1,6 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import type { RealtimeChannel } from "@supabase/supabase-js";
+import React, { useEffect, useState } from "react";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+
+import type { RouterOutputs } from "@acme/api";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -14,7 +18,9 @@ import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
 
 interface VotingBallotProps {
-  userId: string;
+  initialSession?: RouterOutputs["voter"]["sessionById"];
+  initialSessionId?: string;
+  userId?: string;
   electionId: string;
   disabled?: boolean;
   multiSelect?: boolean;
@@ -23,6 +29,8 @@ interface VotingBallotProps {
 }
 
 export function VotingBallot({
+  initialSessionId,
+  userId,
   electionId,
   disabled = false,
   multiSelect = false,
@@ -35,11 +43,48 @@ export function VotingBallot({
 
   const toast = useToast();
 
-  const { data: session } = api.voter.activeSession.useQuery({
-    id: electionId,
+  const supabase = createClientComponentClient();
+
+  const [channel, setChannel] = useState<RealtimeChannel>();
+
+  const [activeSessionId, setActiveSessionId] =
+    useState<string>(initialSessionId);
+
+  if (!initialSessionId) {
+    throw new Error("sessionId is required");
+  }
+
+  useEffect(() => {
+    console.log("Active session id", activeSessionId);
+  }, [activeSessionId]);
+
+  const { data: session } = api.voter.sessionById.useQuery({
+    id: activeSessionId,
   });
 
-  const { mutateAsync: vote } = api.voter.vote.useMutation();
+  const { mutateAsync: vote } = api.voter.vote.useMutation({
+    onSuccess: () => {
+      toast.toast({
+        title: "Vote Submitted",
+        description: "Your vote has been submitted successfully.",
+      });
+    },
+    onError: (error) => {
+      toast.toast({
+        title: "Vote Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (userId && !preview) {
+      const channel = supabase.channel(`elections:${electionId}`);
+      channel.subscribe();
+      setChannel(channel);
+    }
+  }, [userId, electionId, supabase, preview]);
 
   const handleCardClick = (positionId: string, candidateId: string) => {
     setSelectedCandidates((prevSelected) => {
@@ -68,45 +113,24 @@ export function VotingBallot({
           .map(
             (candidateId) =>
               session?.positions
-                .flatMap((position) => position.candidates)
-                .find((candidate) => candidate.id === candidateId)?.name ??
-              "Candidate not found",
+                ?.flatMap((position) => position.candidates)
+                .find((candidate) => candidate.id === candidateId)?.name,
           )
           .join(", ")}`,
       );
     } else {
-      try {
-        await vote({ candidateIds: selectedCandidates });
-        toast.toast({
-          title: "Success",
-          description: "Your vote has been submitted",
-        });
-      } catch (error) {
-        toast.toast({
-          title: "Error",
-          description: "Something went wrong",
-          variant: "destructive",
-        });
-      }
+      await vote({
+        sessionId: initialSessionId,
+        candidateIds: selectedCandidates,
+      });
     }
   };
 
-  async function handleSubmit() {
+  const handleSubmit = () => {
     if (preview) {
       toast.toast({
         title: "Preview Mode",
-        description: `You're currently in preview mode. Your preview votes: ${Object.values(
-          selectedCandidates,
-        )
-          .flat()
-          .map(
-            (candidateId) =>
-              session?.positions
-                .flatMap((position) => position.candidates)
-                .find((candidate) => candidate.id === candidateId)?.name ??
-              "Candidate not found",
-          )
-          .join(", ")}`,
+        description: `You're currently in preview mode. No changes can be made.`,
         variant: "destructive",
       });
       return;
@@ -129,11 +153,9 @@ export function VotingBallot({
       return;
     }
 
-    const candidateIds = Object.values(selectedCandidates).flat();
-
-    await onSubmit(candidateIds);
+    void onSubmit(Object.values(selectedCandidates).flat());
     setSelectedCandidates({});
-  }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center">
