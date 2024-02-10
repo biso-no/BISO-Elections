@@ -5,6 +5,7 @@ import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
+  //These routes are public for anyone. Required for the application to work properly
   if (
     req.nextUrl.pathname.startsWith("/_next") ||
     req.nextUrl.pathname.startsWith("/api") ||
@@ -16,10 +17,11 @@ export async function middleware(req: NextRequest) {
   const supabase = createMiddlewareClient({ req, res });
   const { data } = await supabase.auth.getSession();
 
-  if (data.session?.user.user_metadata?.role === "admin") {
+  //Here are our conditions for the middleware. If the user is an admin, they can access any page. If the user is an election participant, they can only access the /vote page. If the user is not logged in, they can only access the /auth route, including callback.
+  if (data.session?.user.app_metadata?.roles.includes("admin")) {
     return NextResponse.next();
   } else if (
-    data.session?.user.user_metadata?.role === "election_participant" &&
+    data.session?.user.app_metadata?.roles.includes("election_participant") &&
     !req.nextUrl.pathname.startsWith("/vote")
   ) {
     return NextResponse.redirect(process.env.NEXT_PUBLIC_URL + "/vote");

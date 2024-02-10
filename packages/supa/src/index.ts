@@ -32,3 +32,7 @@ export const changeRole = async (userId: string, role: string) => {
   }
   return data;
 };
+
+export const isAdmin = (user: { app_metadata: { roles: string[] } }) => {
+  return user.app_metadata.roles.includes("admin");
+};

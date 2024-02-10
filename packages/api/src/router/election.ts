@@ -142,7 +142,7 @@ export const electionsRouter = createTRPCRouter({
         })
         .returning();
     }),
-  updateSession: protectedProcedure
+  updateSession: adminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -432,4 +432,43 @@ export const electionsRouter = createTRPCRouter({
       console.log("filteredVoters", filteredVoters);
       return filteredVoters;
     }),
+  results: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.election.findFirst({
+      where: eq(schema.election.id, input),
+      columns: {
+        name: true,
+        campus: true,
+        date: true,
+      },
+      with: {
+        sessions: {
+          columns: {
+            name: true,
+          },
+          with: {
+            positions: {
+              columns: {
+                name: true,
+              },
+              with: {
+                candidates: {
+                  columns: {
+                    name: true,
+                  },
+                  with: {
+                    votes: {
+                      columns: {
+                        id: true,
+                        electionCandidateId: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }),
 });

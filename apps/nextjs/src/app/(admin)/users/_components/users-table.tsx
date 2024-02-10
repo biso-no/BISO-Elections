@@ -51,12 +51,12 @@ export function UsersTable({ users }: UserTableProps) {
 
   return (
     <>
-      <Table>
+      <Table className="border-collapse border border-gray-300">
         <TableHeader>
           <TableRow className="text-xs font-medium tracking-wide text-gray-500 dark:text-gray-400">
-            <TableHead className="w-[150px]">Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead className="text-center">Role</TableHead>
+            <TableHead className="w-[150px] p-2">Name</TableHead>
+            <TableHead className="p-2">Email</TableHead>
+            <TableHead className="p-2 text-center">Role</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -65,54 +65,62 @@ export function UsersTable({ users }: UserTableProps) {
               key={user.id}
               className="hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <TableCell className="font-medium">{user.email}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <Select defaultValue={user.app_metadata.electionRole}>
-                <SelectTrigger>
-                  <SelectValue
-                    placeholder={
-                      user.app_metadata.electionRole || "Select a role"
-                    }
-                  >
-                    {user.app_metadata.electionRole}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="election_participant">
-                    Election Participant
-                  </SelectItem>
-                  <SelectItem value="user">User</SelectItem>
-                </SelectContent>
-              </Select>
+              <TableCell className="p-2 font-medium">{user.email}</TableCell>
+              <TableCell className="p-2">{user.email}</TableCell>
+              <TableCell className="p-2">
+                <Select
+                  defaultValue={user.app_metadata.electionRole}
+                  onValueChange={(value) => onRoleChange(user.id, value)}
+                  disabled={user.id === user.id}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={
+                        user.app_metadata.electionRole || "Select a role"
+                      }
+                    >
+                      {user.app_metadata.electionRole}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="election_participant">
+                      Election Participant
+                    </SelectItem>
+                    <SelectItem value="user">User</SelectItem>
+                  </SelectContent>
+                </Select>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-      <Pagination>
-        <PaginationContent>
-          <PaginationItem>
-            <PaginationPrevious href="#" />
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#">1</PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#" isActive>
-              2
-            </PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationLink href="#">3</PaginationLink>
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationEllipsis />
-          </PaginationItem>
-          <PaginationItem>
-            <PaginationNext href="#" />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <div className="mt-4 flex justify-center">
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious href="#" />
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationLink href="#">1</PaginationLink>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationLink href="#" isActive>
+                2
+              </PaginationLink>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationLink href="#">3</PaginationLink>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationEllipsis />
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext href="#" />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      </div>
     </>
   );
 }

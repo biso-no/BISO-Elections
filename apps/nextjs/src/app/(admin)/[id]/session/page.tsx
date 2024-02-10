@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
+import { PDFResults } from "~/app/_components/pdf-results";
 import { VotesDialog } from "~/app/_components/votes-dialog";
 import { VotingBallot } from "~/app/_components/voting-ballot";
 import { PopoverActions } from "~/components/popover-actions";
@@ -57,6 +58,7 @@ const candidateFormSchema = z.object({
 });
 
 type Status = "not_started" | "in_progress" | "completed";
+const statuses = ["not_started", "in_progress", "completed"];
 
 export default function SessionPage() {
   const electionId = useElectionId();
@@ -272,108 +274,107 @@ export default function SessionPage() {
       },
     });
 
-  const onSessionToggle = async (sessionId: string, currentStatus: Status) => {
-    // Check if sessions is defined
+  const onSessionToggle = async (
+    sessionId: string,
+    currentStatusIndex: number,
+  ) => {
+    console.log("Current status: ", statuses[currentStatusIndex]);
     if (sessions) {
-      // Deactivate all sessions
-      for (const session of sessions) {
-        if (session.status === "in_progress") {
-          await updateSession({
-            id: sessionId,
-            status: currentStatus,
-          });
-        }
-      }
+      await updateSession({
+        id: sessionId,
+        status: statuses[(currentStatusIndex + 1) % statuses.length] as Status,
+      });
     }
   };
 
   return (
     <>
-      <div className="flex items-center">
+      <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold md:text-2xl">Sessions</h1>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="ml-auto" size="sm">
-              Add Session
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)}>
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Session name</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Session name" />
-                      </FormControl>
-                      <FormDescription>
-                        This is the name of the session
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Session type</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-1"
-                        >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="position" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Position
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="statute_change" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Statute change
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input {...field} placeholder="Description" />
-                      </FormControl>
-                      <FormDescription>
-                        This is the description of the session
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+        <div className="flex space-x-4">
+          <PDFResults electionId={electionId} />
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="sm">Add Session</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Session name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Session name" />
+                        </FormControl>
+                        <FormDescription>
+                          This is the name of the session
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Session type</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex flex-col space-y-1"
+                          >
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="position" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Position
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="statute_change" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Statute change
+                              </FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Description" />
+                        </FormControl>
+                        <FormDescription>
+                          This is the description of the session
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-                <DialogFooter>
-                  <Button type="submit">Add session</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  <DialogFooter>
+                    <Button type="submit">Add session</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
       <div className="rounded-lg border shadow-sm">
         {sessions?.map((session) => (
@@ -421,16 +422,19 @@ export default function SessionPage() {
                     </Dialog>
                     <Button
                       onClick={() =>
-                        onSessionToggle(session.id, session.status)
+                        onSessionToggle(
+                          session.id,
+                          statuses.indexOf(session.status),
+                        )
                       }
-                      disabled={session.status === "completed"}
+                      disabled={session.status === statuses[2]} // "completed"
                       variant={
-                        session.status === "in_progress"
+                        session.status === statuses[1] // "in_progress"
                           ? "destructive"
                           : "default"
                       }
                     >
-                      {session.status === "in_progress"
+                      {session.status === statuses[1] // "in_progress"
                         ? "Deactivate"
                         : "Activate"}
                     </Button>

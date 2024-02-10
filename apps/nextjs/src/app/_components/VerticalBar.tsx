@@ -10,14 +10,10 @@ import {
   CardHeader,
 } from "~/components/ui/card";
 import { useElectionId } from "~/lib/hooks/useElectionId";
+import { api } from "~/trpc/react";
 import { TeamSwitcher } from "./TeamSwitcher";
 
 const bottomNavItems = [
-  {
-    name: "Elections",
-    href: "/elections",
-    icon: ElectionsIcon, // Replace with your icon
-  },
   {
     name: "Users & Access",
     href: "/users",
@@ -29,6 +25,10 @@ export function VerticalBar() {
   const pathname = usePathname();
 
   const electionId = useElectionId();
+
+  const { data: user } = api.auth.me.useQuery();
+
+  const isAdmin = user?.app_metadata.roles.includes("admin");
 
   const navItems = [
     {
@@ -43,18 +43,14 @@ export function VerticalBar() {
             href: "/session",
             icon: UsersIcon,
           },
+
+          {
+            name: "Voters",
+            href: "/voters",
+            icon: UsersIcon,
+          },
         ]
       : []),
-    {
-      name: "Voters",
-      href: "/voters",
-      icon: UsersIcon,
-    },
-    {
-      name: "Statistics",
-      href: "#",
-      icon: BarChartIcon,
-    },
   ];
 
   const activatePath = (path: string) => {
@@ -93,22 +89,24 @@ export function VerticalBar() {
             ))}
           </nav>
         </CardContent>
-        <CardFooter className="sticky bottom-0">
-          <nav className="grid items-start px-4 text-sm font-medium">
-            {bottomNavItems.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${activatePath(
-                  item.href,
-                )}`}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </CardFooter>
+        {isAdmin && (
+          <CardFooter className="sticky bottom-0">
+            <nav className="grid items-start px-4 text-sm font-medium">
+              {bottomNavItems.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${activatePath(
+                    item.href,
+                  )}`}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );
