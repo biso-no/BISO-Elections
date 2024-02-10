@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
 
+import { api } from "~/trpc/server";
+
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -26,30 +28,27 @@ export async function GET(request: NextRequest) {
       if (!profile) {
         //Add role as metadata to the user
 
-        const { data: updateUserData, error: updateUserError } =
-          await supabase.auth.updateUser({
-            data: {
-              role: "election_participant",
-            },
-          });
-
-        console.log("Profile Error1:", updateUserError);
-        console.log("Profile1:", updateUserData);
-
         const { data: newProfileData, error: newProfileError } = await supabase
           .from("profile")
           .insert([
             {
-              id: updateUserData?.user?.id,
-              email: updateUserData?.user?.email,
+              id: data.user?.id,
+              email: data.session?.user?.email ?? "na",
               name: data.session?.user?.user_metadata?.full_name ?? "na",
-              user_role: "admin",
+              user_role: "user",
               image:
                 data.session?.user.user_metadata.avatar_url ??
                 "https://avatars.githubusercontent.com/u/8186664?v=4",
             },
           ])
           .select();
+
+        if (newProfileData && data.user) {
+          await api.admin.changeRole.mutate({
+            userId: data.user?.id,
+            role: "election_participant",
+          });
+        }
 
         console.log("New Profile Error1:", newProfileError);
         console.log("New Profile Data1:", newProfileData);

@@ -2,13 +2,12 @@ import type { User } from "@supabase/supabase-js";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { and, desc, eq, or, schema } from "@acme/db";
 import { adminAuthClient, changeRole } from "@acme/supa";
 
-import { adminProcedure, createTRPCRouter } from "../trpc";
+import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const adminRouter = createTRPCRouter({
-  changeRole: adminProcedure
+  changeRole: protectedProcedure
     .input(
       z.object({
         userId: z.string(),
