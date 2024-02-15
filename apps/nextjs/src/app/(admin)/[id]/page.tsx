@@ -8,6 +8,9 @@ export default function DashboardPage({ params }: { params: { id: string } }) {
 
   return (
     <>
+      <div className="mb-4 text-3xl font-bold">
+        THIS PAGE IS WORK IN PROGRESS
+      </div>
       <DashboardStatistics />
       <VoterTable electionId={id} />
     </>

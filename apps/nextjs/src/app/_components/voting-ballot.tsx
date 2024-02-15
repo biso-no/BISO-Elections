@@ -93,10 +93,10 @@ export function VotingBallot({
   }
 
   return (
-    <div className="flex w-full flex-col items-center justify-center gap-4">
+    <div className="flex w-full flex-col items-center justify-center gap-4 md:flex-row">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="flex flex-row gap-4">
+          <div className="flex flex-col gap-4 md:flex-row">
             {session.positions.map((position) => (
               <Card key={position.id} className="w-full max-w-lg">
                 <CardContent className="grid gap-4">
@@ -132,7 +132,7 @@ export function VotingBallot({
               </Card>
             ))}
           </div>
-          <div className="flex justify-end">
+          <div className="top-4 flex justify-end">
             <Button type="submit">Submit Votes</Button>
           </div>
         </form>

@@ -36,7 +36,7 @@ export function VotesDialog({ sessionId }: VotesDialog) {
       <DialogTrigger>
         <Button>View Votes</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="h-2/3 w-1/2  overflow-y-auto p-4">
         <DialogTitle>Results</DialogTitle>
         <DialogClose />
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

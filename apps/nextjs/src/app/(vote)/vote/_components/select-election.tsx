@@ -31,14 +31,14 @@ export function SelectElection({ elections }: SelectElection) {
 
   useEffect(() => {
     if (elections?.length === 1) {
-      router.push(`/vote2/${elections[0]?.election.id}`);
+      router.push(`/vote/${elections[0]?.election.id}`);
     }
   }, [elections, router]);
 
   const onSelect = async (electionId: string) => {
     try {
       console.log("Election ID: ", electionId);
-      router.push(`/vote2/${electionId}`);
+      router.push(`/vote/${electionId}`);
     } catch (error) {
       toast.toast({
         title: "Error",

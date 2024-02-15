@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { FileTextIcon } from "@radix-ui/react-icons";
 import {

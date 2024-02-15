@@ -45,6 +45,7 @@ import { api } from "~/trpc/react";
 import { CreatePosition } from "./_components/create-position";
 import { CreateSession } from "./_components/create-session";
 import { CreateStatuteChange } from "./_components/create-statute-change";
+import { DeleteSession } from "./_components/delete-session";
 import { PreviewSession } from "./_components/preview-session";
 
 const formSchema = z.object({
@@ -84,25 +85,6 @@ export default function SessionPage() {
 
   const { data: sessions } = api.elections.sessions.useQuery(electionId);
 
-  const { mutateAsync: deleteSession, error: deleteError } =
-    api.elections.deleteSession.useMutation({
-      async onSuccess() {
-        toast.toast({
-          title: "Session deleted",
-          description: "The session has been deleted",
-        });
-        await utils.elections.sessions.invalidate();
-      },
-
-      async onError() {
-        toast.toast({
-          title: "Error",
-          description: deleteError?.message,
-          variant: "destructive",
-        });
-      },
-    });
-
   const { mutateAsync: createCandidate, error: candidateError } =
     api.elections.createCandidate.useMutation({
       async onSuccess() {
@@ -124,14 +106,6 @@ export default function SessionPage() {
         name: formData.name,
         electionPositionId: positionId,
       });
-    } catch (error) {
-      console.log("Error: ", error);
-    }
-  };
-
-  const onDelete = async (sessionId: string) => {
-    try {
-      await deleteSession(sessionId);
     } catch (error) {
       console.log("Error: ", error);
     }
@@ -261,12 +235,7 @@ export default function SessionPage() {
               <AccordionContent>
                 <div className="px-4 py-2">
                   <div className="flex items-center space-x-2">
-                    <Button
-                      onClick={() => onDelete(session.id)}
-                      variant="destructive"
-                    >
-                      Delete
-                    </Button>
+                    <DeleteSession sessionId={session.id} />
                     <PreviewSession session={session} />
                     <Button
                       onClick={() =>
@@ -285,10 +254,10 @@ export default function SessionPage() {
                       }
                     >
                       {session.status === statuses[1] // "in_progress"
-                        ? "Deactivate"
+                        ? "Complete"
                         : session.status === statuses[2] // "completed"
                           ? "Completed"
-                          : "Activate"}
+                          : "Start"}
                     </Button>
                     <VotesDialog sessionId={session.id} />
                   </div>

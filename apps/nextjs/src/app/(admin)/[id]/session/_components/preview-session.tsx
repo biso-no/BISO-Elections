@@ -20,7 +20,7 @@ export function PreviewSession({ session }: SessionFormProps) {
           Preview
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-full">
+      <DialogContent className="flex flex-col space-y-4 p-4 md:p-8">
         <h2 className="text-lg font-semibold md:text-2xl">{session?.name}</h2>
         <VotingBallot session={session} preview />
       </DialogContent>
