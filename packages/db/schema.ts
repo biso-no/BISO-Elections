@@ -119,9 +119,6 @@ export const profileRelations = relations(profile, ({ many }) => ({
   posts: many(post),
   elections: many(election),
   expenses: many(expense),
-  tickets: many(eventTicket),
-  events: many(event),
-  eventAdmins: many(eventTenantAdmin),
   electionAdmins: many(electionAdmin),
   chapterProgress: many(chapterProgress),
 }));
@@ -154,11 +151,9 @@ export const electionSession = pgTable("election_session", {
     .primaryKey()
     .default(sql`uuid_generate_v4()`),
   name: varchar("name", { length: 256 }).notNull(),
-  description: varchar("description", { length: 256 }),
   electionId: varchar("election_id", { length: 256 })
     .notNull()
     .references(() => election.id, { onDelete: "cascade" }),
-  type: electionSessionType("type").notNull(),
   status: electionSessionStatus("status").notNull(),
 });
 
@@ -181,7 +176,6 @@ export const electionPosition = pgTable("election_position", {
     .primaryKey()
     .default(sql`uuid_generate_v4()`),
   name: varchar("name", { length: 256 }).notNull(),
-  description: varchar("description", { length: 256 }),
   sessionId: varchar("session_id", { length: 256 }).references(
     () => electionSession.id,
     { onDelete: "cascade" },
@@ -259,9 +253,14 @@ export const electionVote = pgTable("election_vote", {
     () => electionSession.id,
     { onDelete: "cascade" },
   ),
-  electionCandidateId: varchar("election_candidate_id", { length: 256 })
-    .notNull()
-    .references(() => electionCandidate.id, { onDelete: "cascade" }),
+  candidateId: varchar("candidate_id", { length: 256 }).references(
+    () => electionCandidate.id,
+    { onDelete: "cascade" },
+  ),
+  statuteChangeId: varchar("statute_change_id", { length: 256 }).references(
+    () => electionStatuteChange.id,
+    { onDelete: "cascade" },
+  ),
 });
 
 export const electionVoteRelations = relations(electionVote, ({ one }) => ({
@@ -270,8 +269,12 @@ export const electionVoteRelations = relations(electionVote, ({ one }) => ({
     references: [profile.id],
   }),
   candidate: one(electionCandidate, {
-    fields: [electionVote.electionCandidateId],
+    fields: [electionVote.candidateId],
     references: [electionCandidate.id],
+  }),
+  statuteChange: one(electionStatuteChange, {
+    fields: [electionVote.statuteChangeId],
+    references: [electionStatuteChange.id],
   }),
   session: one(electionSession, {
     fields: [electionVote.sessionId],
@@ -298,10 +301,10 @@ export const electionStatuteChange = pgTable("statute_change", {
     .primaryKey()
     .default(sql`uuid_generate_v4()`),
   name: varchar("name", { length: 256 }).notNull(),
-  description: varchar("description", { length: 256 }).notNull(),
-  sessionId: varchar("session_id", { length: 256 }).references(
-    () => electionSession.id,
-  ),
+  withAbstain: boolean("with_abstain").notNull(),
+  sessionId: varchar("session_id", { length: 256 })
+    .references(() => electionSession.id, { onDelete: "cascade" })
+    .notNull(),
 });
 
 export const electionStatuteChangeRelations = relations(
@@ -370,231 +373,6 @@ export const expenseAttachmentRelations = relations(
     }),
   }),
 );
-
-//BISO Events
-export const eventTenant = pgTable("event_tenant", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  name: varchar("name", { length: 256 }).notNull(),
-  description: varchar("description", { length: 256 }),
-  image: varchar("image", { length: 256 }),
-  createdBy: uuid("created_by")
-    .notNull()
-    .references(() => profile.id, { onDelete: "restrict" }),
-  logo: varchar("logo", { length: 256 }),
-  onlineStatus: onlineStatus("online_status").notNull(),
-  createdAt: timestamp("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updated_at"),
-});
-
-export const eventTenantAdmin = pgTable("event_tenant_admin", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  eventTenantId: uuid("event_tenant_id")
-    .notNull()
-    .references(() => eventTenant.id),
-  profileId: uuid("profile_id")
-    .notNull()
-    .references(() => profile.id),
-});
-
-export const eventTenantRelations = relations(eventTenant, ({ many, one }) => ({
-  admins: many(eventTenantAdmin),
-  createdBy: one(profile, {
-    fields: [eventTenant.createdBy],
-    references: [profile.id],
-  }),
-}));
-
-export const eventTenantAdminRelations = relations(
-  eventTenantAdmin,
-  ({ one }) => ({
-    eventTenant: one(eventTenant, {
-      fields: [eventTenantAdmin.eventTenantId],
-      references: [eventTenant.id],
-    }),
-    profile: one(profile, {
-      fields: [eventTenantAdmin.profileId],
-      references: [profile.id],
-    }),
-  }),
-);
-
-export const event = pgTable("event", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  name: varchar("name", { length: 256 }).notNull(),
-  description: varchar("description", { length: 256 }),
-  image: varchar("image", { length: 256 }),
-  eventTenantId: uuid("event_tenant_id")
-    .notNull()
-    .references(() => eventTenant.id, { onDelete: "restrict" }),
-  createdBy: uuid("created_by")
-    .notNull()
-    .references(() => profile.id, { onDelete: "restrict" }),
-  logo: varchar("logo", { length: 256 }),
-  status: eventStatus("status").notNull(),
-  type: eventType("type").notNull(),
-  startDate: timestamp("start_date").notNull(),
-  endDate: timestamp("end_date").notNull(),
-  refundable: boolean("refundable").notNull(),
-  createdAt: timestamp("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updated_at"),
-});
-
-export const eventRelations = relations(event, ({ many, one }) => ({
-  admins: many(eventTenantAdmin),
-  createdBy: one(profile, {
-    fields: [event.createdBy],
-    references: [profile.id],
-  }),
-  eventTenant: one(eventTenant, {
-    fields: [event.eventTenantId],
-    references: [eventTenant.id],
-  }),
-  tickets: many(eventTicket),
-}));
-
-export const eventTicket = pgTable("event_ticket", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  eventId: uuid("event_id")
-    .notNull()
-    .references(() => event.id, { onDelete: "restrict" }),
-  name: varchar("name", { length: 256 }).notNull(),
-  description: varchar("description", { length: 256 }),
-  type: ticketType("type").notNull(),
-  status: ticketStatus("status").notNull(),
-  price: integer("price").notNull(),
-  refundedAmount: integer("refunded_amount").notNull(),
-  refundableAmountType: ticketRefundableAmountType("refundable_amount_type"),
-  refundableUntil: timestamp("refundable_until"),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => profile.id, { onDelete: "restrict" }),
-  createdAt: timestamp("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updated_at"),
-});
-
-export const eventTicketRelations = relations(eventTicket, ({ one }) => ({
-  event: one(event, {
-    fields: [eventTicket.eventId],
-    references: [event.id],
-  }),
-  customer: one(profile, {
-    fields: [eventTicket.customerId],
-    references: [profile.id],
-  }),
-}));
-
-export const eventOrder = pgTable("event_order", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  eventId: uuid("event_id")
-    .notNull()
-    .references(() => event.id, { onDelete: "restrict" }),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => profile.id, { onDelete: "restrict" }),
-  status: varchar("status", { length: 256 }).notNull(),
-  createdAt: timestamp("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updated_at"),
-});
-
-export const eventOrderLines = pgTable("event_order_lines", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  orderId: uuid("order_id")
-    .notNull()
-    .references(() => eventOrder.id, { onDelete: "restrict" }),
-  ticketId: uuid("ticket_id")
-    .notNull()
-    .references(() => eventTicket.id, { onDelete: "restrict" }),
-  quantity: integer("quantity").notNull(),
-  refundedAmount: integer("refunded_amount").notNull(),
-  refundableAmountType: ticketRefundableAmountType("refundable_amount_type"),
-  refundableUntil: timestamp("refundable_until"),
-  createdAt: timestamp("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updated_at"),
-});
-
-export const payment = pgTable("payment", {
-  id: uuid("id")
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  orderId: uuid("order_id")
-    .notNull()
-    .references(() => eventOrder.id, { onDelete: "restrict" }),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => profile.id, { onDelete: "restrict" }),
-  provider: paymentProvider("provider").notNull(),
-  type: paymentType("type").notNull(),
-  status: paymentStatus("status").notNull(),
-  amount: integer("amount").notNull(),
-  currency: varchar("currency", { length: 256 }).notNull(),
-  paymentIntentId: varchar("payment_intent_id", { length: 256 }),
-  paymentMethodId: varchar("payment_method_id", { length: 256 }),
-  receiptUrl: varchar("receipt_url", { length: 256 }),
-  createdAt: timestamp("created_at")
-    .default(sql`CURRENT_TIMESTAMP`)
-    .notNull(),
-  updatedAt: timestamp("updated_at"),
-});
-
-export const paymentRelations = relations(payment, ({ one }) => ({
-  order: one(eventOrder, {
-    fields: [payment.orderId],
-    references: [eventOrder.id],
-  }),
-  customer: one(profile, {
-    fields: [payment.customerId],
-    references: [profile.id],
-  }),
-}));
-
-export const eventOrderRelations = relations(eventOrder, ({ many, one }) => ({
-  lines: many(eventOrderLines),
-  event: one(event, {
-    fields: [eventOrder.eventId],
-    references: [event.id],
-  }),
-  customer: one(profile, {
-    fields: [eventOrder.customerId],
-    references: [profile.id],
-  }),
-}));
-
-export const eventOrderLinesRelations = relations(
-  eventOrderLines,
-  ({ one }) => ({
-    order: one(eventOrder, {
-      fields: [eventOrderLines.orderId],
-      references: [eventOrder.id],
-    }),
-    ticket: one(eventTicket, {
-      fields: [eventOrderLines.ticketId],
-      references: [eventTicket.id],
-    }),
-  }),
-);
-
 export const course = pgTable("course", {
   id: uuid("id")
     .primaryKey()

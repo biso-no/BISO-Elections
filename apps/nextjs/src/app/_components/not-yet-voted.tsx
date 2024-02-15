@@ -38,6 +38,7 @@ export function NotYetVoted({ sessionId, electionId }: NotYetVotedProps) {
     }
   }, [notVoted]);
 
+  /*
   useEffect(() => {
     const interval = setInterval(() => {
       utils.elections.votersWhoHaveNotVoted
@@ -49,6 +50,7 @@ export function NotYetVoted({ sessionId, electionId }: NotYetVotedProps) {
     }, 3000);
     return () => clearInterval(interval);
   }, [electionId, sessionId, utils.elections.votersWhoHaveNotVoted]);
+  */
 
   return (
     <Table>

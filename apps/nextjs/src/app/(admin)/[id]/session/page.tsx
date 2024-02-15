@@ -16,6 +16,7 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +33,6 @@ import {
   FormMessage,
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import {
   Table,
   TableBody,
@@ -43,14 +43,12 @@ import {
 } from "~/components/ui/table";
 import { useToast } from "~/components/ui/use-toast";
 import { useElectionId } from "~/lib/hooks/useElectionId";
+import { socket } from "~/lib/io";
 import { api } from "~/trpc/react";
+import { CreateStatuteChange } from "./_components/create-statute-change";
 
 const formSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(["position", "statute_change"], {
-    required_error: "Invalid type",
-  }),
-  description: z.string().min(1),
 });
 
 const candidateFormSchema = z.object({
@@ -70,7 +68,6 @@ export default function SessionPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      type: "position",
     },
   });
 
@@ -121,6 +118,7 @@ export default function SessionPage() {
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     try {
+      console.log(data);
       await createSession({ ...data, electionId });
     } catch {
       console.log("Error: ", error);
@@ -152,14 +150,13 @@ export default function SessionPage() {
     });
 
   const onPositionCreated = async (
-    formData: { name: string; type: string; description: string },
+    formData: { name: string },
     sessionId: string,
   ) => {
     try {
       await createPosition({
         name: formData.name,
         sessionId: sessionId,
-        description: formData.description,
       });
       toast.toast({
         title: "Position created",
@@ -274,16 +271,63 @@ export default function SessionPage() {
       },
     });
 
+  const { mutateAsync: deleteStatuteChange, error: deleteStatuteChangeError } =
+    api.elections.deleteStatuteChange.useMutation({
+      async onSuccess() {
+        toast.toast({
+          title: "Statute change deleted",
+          description: "The statute change has been deleted",
+        });
+        await utils.elections.sessions.invalidate();
+      },
+
+      async onError() {
+        toast.toast({
+          title: "Error",
+          description: deleteStatuteChangeError?.message,
+          variant: "destructive",
+        });
+      },
+    });
+
+  const onStatuteChangeDelete = async (statuteChangeId: string) => {
+    try {
+      await deleteStatuteChange({ id: statuteChangeId });
+    } catch {
+      console.log("Error: ", error);
+      toast.toast({
+        title: "Error",
+        description: deleteStatuteChangeError?.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const onSessionToggle = async (
     sessionId: string,
     currentStatusIndex: number,
   ) => {
     console.log("Current status: ", statuses[currentStatusIndex]);
     if (sessions) {
+      // Find any session that is in progress
+      const inProgressSession = sessions.find(
+        (session) => session.status === "in_progress",
+      );
+
+      // If there is a session in progress, update its status to disabled
+      if (inProgressSession) {
+        await updateSession({
+          id: inProgressSession.id,
+          status: "completed" as Status,
+        });
+      }
+
+      // Continue with the rest of the function
       await updateSession({
         id: sessionId,
         status: statuses[(currentStatusIndex + 1) % statuses.length] as Status,
       });
+      socket.emit("sessionUpdated", sessionId);
     }
   };
 
@@ -316,57 +360,6 @@ export default function SessionPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="type"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>Session type</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex flex-col space-y-1"
-                          >
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="position" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Position
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="statute_change" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Statute change
-                              </FormLabel>
-                            </FormItem>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Description" />
-                        </FormControl>
-                        <FormDescription>
-                          This is the description of the session
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
                   <DialogFooter>
                     <Button type="submit">Add session</Button>
                   </DialogFooter>
@@ -383,13 +376,9 @@ export default function SessionPage() {
               <AccordionTrigger>
                 <div className="flex items-center justify-between px-4 py-2">
                   <div className="flex items-center space-x-2">
-                    <div className="mr-1 text-sm font-medium text-gray-900">
+                    <div className="mr-1 text-sm font-medium">
                       {session.name}
                     </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="ml-1 mr-1 text-sm text-gray-500">-</div>
-                    <div className="text-sm text-gray-500">{session.type}</div>
                   </div>
                 </div>
               </AccordionTrigger>
@@ -413,10 +402,9 @@ export default function SessionPage() {
                           {session.name}
                         </h2>
                         <VotingBallot
-                          initialSessionId={session.id}
+                          initialSession={session}
                           preview
-                          electionId={electionId}
-                          userId="1"
+                          initialHasVoted={false}
                         />
                       </DialogContent>
                     </Dialog>
@@ -431,12 +419,16 @@ export default function SessionPage() {
                       variant={
                         session.status === statuses[1] // "in_progress"
                           ? "destructive"
-                          : "default"
+                          : session.status === statuses[2] // "completed"
+                            ? "ghost"
+                            : "default"
                       }
                     >
                       {session.status === statuses[1] // "in_progress"
                         ? "Deactivate"
-                        : "Activate"}
+                        : session.status === statuses[2] // "completed"
+                          ? "Completed"
+                          : "Activate"}
                     </Button>
                     <VotesDialog
                       sessionId={session.id}
@@ -444,12 +436,9 @@ export default function SessionPage() {
                     />
                   </div>
                   {/*Preview button that opens a dialog with the voting ballot*/}
-                  {session.type === "position" && (
-                    <>
-                      <div className="mt-4 flex items-center justify-between">
-                        <h2 className="text-lg font-semibold md:text-2xl">
-                          Positions
-                        </h2>
+                  <>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex space-x-4">
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button className="ml-auto" size="sm">
@@ -482,25 +471,6 @@ export default function SessionPage() {
                                     </FormItem>
                                   )}
                                 />
-                                <FormField
-                                  control={form.control}
-                                  name="description"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Description</FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          {...field}
-                                          placeholder="Description"
-                                        />
-                                      </FormControl>
-                                      <FormDescription>
-                                        This is the description of the position
-                                      </FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
                                 <DialogFooter>
                                   <Button type="submit">Add position</Button>
                                 </DialogFooter>
@@ -508,19 +478,28 @@ export default function SessionPage() {
                             </Form>
                           </DialogContent>
                         </Dialog>
+                        <CreateStatuteChange sessionId={session.id} />
                       </div>
-                      <div className="mt-4">
+                    </div>
+                    <div className="mt-4 flex flex-row">
+                      <div className="flex w-1/2 flex-col">
+                        <div className="mt-4 flex items-center justify-between">
+                          <h2 className="text-lg font-semibold md:text-2xl">
+                            Running Positions
+                          </h2>
+                        </div>
                         {session.positions.map((position) => (
                           <Accordion
                             type="single"
                             key={position.id}
                             collapsible
+                            className="mb-4 mr-4"
                           >
                             <AccordionItem value={position.id}>
                               <AccordionTrigger>
                                 <div className="flex items-center justify-between px-4 py-2">
                                   <div className="flex items-center space-x-2">
-                                    <div className="text-sm font-medium text-gray-900">
+                                    <div className="text-sm font-medium">
                                       {position.name}
                                     </div>
                                   </div>
@@ -528,9 +507,6 @@ export default function SessionPage() {
                               </AccordionTrigger>
                               <AccordionContent>
                                 <div className="px-4 py-2">
-                                  <p className="text-sm text-gray-500">
-                                    {position.description}
-                                  </p>
                                   <div className="mt-4 flex items-center justify-between">
                                     <h2 className="text-lg font-semibold md:text-2xl">
                                       Candidates
@@ -630,8 +606,65 @@ export default function SessionPage() {
                           </Accordion>
                         ))}
                       </div>
-                    </>
-                  )}
+                      <div className="flex w-1/2 flex-col">
+                        {session.statuteChanges.length > 0 && (
+                          <>
+                            <div className="mt-4 flex items-center justify-between">
+                              <h2 className="text-lg font-semibold md:text-2xl">
+                                Statute Changes
+                              </h2>
+                            </div>
+                            <div className="mt-4">
+                              <Table className="mt-4">
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>With abstain</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {session.statuteChanges.map(
+                                    (statuteChange) => (
+                                      <TableRow key={statuteChange.id}>
+                                        <TableCell>
+                                          {statuteChange.name}
+                                        </TableCell>
+                                        <TableCell>
+                                          {statuteChange.withAbstain
+                                            ? "Yes"
+                                            : "No"}
+                                        </TableCell>
+                                        <TableCell>
+                                          <PopoverActions
+                                            key={statuteChange.id}
+                                            items={[
+                                              {
+                                                id: "delete",
+                                                icon: (
+                                                  <DeleteIcon className="h-4 w-4" />
+                                                ),
+                                                label: "Delete",
+                                                onClick: () => {
+                                                  void onStatuteChangeDelete(
+                                                    statuteChange.id,
+                                                  );
+                                                },
+                                              },
+                                            ]}
+                                          />
+                                        </TableCell>
+                                      </TableRow>
+                                    ),
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </>
                 </div>
               </AccordionContent>
             </AccordionItem>

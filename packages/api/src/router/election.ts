@@ -86,7 +86,6 @@ export const electionsRouter = createTRPCRouter({
       z.object({
         sessionId: z.string().min(1),
         name: z.string().min(1),
-        description: z.string().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -96,16 +95,61 @@ export const electionsRouter = createTRPCRouter({
         .values({
           name: input.name,
           sessionId: input.sessionId,
-          description: input.description,
         })
         .returning();
+    }),
+  createStatuteChange: adminProcedure
+    .input(
+      z.object({
+        sessionId: z.string(),
+        content: z.string().min(1),
+        withAbstain: z.boolean(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Check if the user is an admin of the election
+      return ctx.db.insert(schema.electionStatuteChange).values({
+        name: input.content,
+        withAbstain: input.withAbstain,
+        sessionId: input.sessionId,
+      });
+    }),
+  deleteStatuteChange: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      //Deletes the statute change
+      return ctx.db
+        .delete(schema.electionStatuteChange)
+        .where(eq(schema.electionStatuteChange.id, input.id));
     }),
   sessions: protectedProcedure
     .input(z.string())
     .query(async ({ ctx, input }) => {
       return ctx.db.query.electionSession.findMany({
         with: {
+          statuteChanges: {
+            columns: {
+              name: true,
+              sessionId: true,
+              withAbstain: true,
+              id: true,
+            },
+          },
+          election: {
+            columns: {
+              name: true,
+              id: true,
+            },
+          },
           positions: {
+            columns: {
+              id: true,
+              name: true,
+            },
             with: {
               candidates: {
                 columns: {
@@ -115,7 +159,6 @@ export const electionsRouter = createTRPCRouter({
               },
             },
           },
-          statuteChanges: true,
         },
         where: eq(schema.electionSession.electionId, input),
       });
@@ -125,8 +168,6 @@ export const electionsRouter = createTRPCRouter({
       z.object({
         electionId: z.string(),
         name: z.string().min(1),
-        description: z.string().min(1),
-        type: z.enum(["statute_change", "position"]),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -136,8 +177,6 @@ export const electionsRouter = createTRPCRouter({
         .values({
           name: input.name,
           electionId: input.electionId,
-          description: input.description,
-          type: input.type,
           status: "not_started",
         })
         .returning();
@@ -148,7 +187,6 @@ export const electionsRouter = createTRPCRouter({
         id: z.string(),
         name: z.string().min(1).optional(),
         description: z.string().min(1).optional(),
-        type: z.enum(["statute_change", "position"]).optional(),
         status: z.enum(["not_started", "in_progress", "completed"]).optional(),
       }),
     )
@@ -158,8 +196,6 @@ export const electionsRouter = createTRPCRouter({
         .update(schema.electionSession)
         .set({
           name: input.name,
-          description: input.description,
-          type: input.type,
           status: input.status,
         })
         .where(eq(schema.electionSession.id, input.id));
@@ -173,7 +209,8 @@ export const electionsRouter = createTRPCRouter({
             votes: {
               columns: {
                 id: true,
-                electionCandidateId: true,
+                candidateId: true,
+                statuteChangeId: true,
               },
             },
           },
@@ -287,18 +324,25 @@ export const electionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      //For each voter, check if their profile exists, if not, create it. Then create the voter
       const voters = input.voters.map(async (voter) => {
-        const { data, error } = await inviteVoter(voter.email);
+        let profileId;
 
-        if (!data?.user) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: error?.message,
-          });
-        }
-        if (data.user) {
-          //Create a new profile
+        const existingProfile = await ctx.db.query.profile.findFirst({
+          where: eq(schema.profile.email, voter.email),
+        });
+
+        if (existingProfile) {
+          profileId = existingProfile.id;
+        } else {
+          const { data, error } = await inviteVoter(voter.email);
+
+          if (error || !data?.user) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: error?.message || "Failed to invite voter",
+            });
+          }
+
           const profile = await ctx.db
             .insert(schema.profile)
             .values({
@@ -308,23 +352,27 @@ export const electionsRouter = createTRPCRouter({
               userRole: "election_participant",
             })
             .returning();
-          console.log("profile", profile);
+
           if (!profile) {
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
               message: "Failed to create profile",
             });
           }
-          return ctx.db
-            .insert(schema.electionVoter)
-            .values({
-              profileId: data.user.id,
-              electionId: input.electionId,
-              vote_weight: voter.vote_weight,
-            })
-            .returning();
+
+          profileId = data.user.id;
         }
+
+        return ctx.db
+          .insert(schema.electionVoter)
+          .values({
+            profileId,
+            electionId: input.electionId,
+            vote_weight: voter.vote_weight,
+          })
+          .returning();
       });
+
       return Promise.all(voters);
     }),
   session: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
@@ -354,9 +402,9 @@ export const electionsRouter = createTRPCRouter({
     .input(z.string())
     .query(async ({ ctx, input }) => {
       return ctx.db.query.electionVote.findMany({
-        where: eq(schema.electionVote.electionCandidateId, input),
+        where: eq(schema.electionVote.candidateId, input),
         columns: {
-          electionCandidateId: true,
+          candidateId: true,
         },
         with: {
           candidate: {
@@ -459,7 +507,8 @@ export const electionsRouter = createTRPCRouter({
                     votes: {
                       columns: {
                         id: true,
-                        electionCandidateId: true,
+                        candidateId: true,
+                        statuteChangeId: true,
                       },
                     },
                   },

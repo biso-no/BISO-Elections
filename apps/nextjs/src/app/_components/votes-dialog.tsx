@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 
 import type { RouterOutputs } from "@acme/api";
 
@@ -48,7 +49,7 @@ export function VotesDialog({ sessionId, electionId }: VotesDialog) {
       setPositions(fetchedPositions);
     }
   }, [fetchedPositions]);
-
+  /*
   useEffect(() => {
     //Every 5 seconds, the positions query is invalidated and refetched.
     const interval = setInterval(() => {
@@ -56,6 +57,20 @@ export function VotesDialog({ sessionId, electionId }: VotesDialog) {
     }, 3000);
     return () => clearInterval(interval);
   }, [sessionId, utils.elections.positions]);
+  */
+
+  useEffect(() => {
+    const socket = io("http://localhost:3001");
+
+    socket.on("newVote", (voteData) => {
+      console.log("New vote received:", voteData);
+      utils.elections.votes.invalidate(sessionId).catch(console.error);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [sessionId, utils.elections.votes]);
 
   return (
     <Dialog>

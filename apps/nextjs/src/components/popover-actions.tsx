@@ -21,7 +21,7 @@ export function PopoverActions({ items }: PopoverActionsProps) {
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          className="rounded bg-transparent px-2 py-1 text-black hover:bg-gray-200 active:bg-gray-300"
+          className="rounded bg-transparent px-2 py-1 hover:bg-gray-200 hover:text-gray-700 active:bg-gray-300 active:text-gray-800"
           type="button"
         >
           <MoreVerticalIcon className="h-4 w-4" />

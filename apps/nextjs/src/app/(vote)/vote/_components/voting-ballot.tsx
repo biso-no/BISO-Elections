@@ -15,48 +15,71 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "~/components/ui/form";
 import { useToast } from "~/components/ui/use-toast";
+import { socket } from "~/lib/io";
 import { api } from "~/trpc/react";
 import { AlreadyVoted } from "./already-voted";
 
 interface VotingBallotProps {
   initialSession: RouterOutputs["voter"]["activeSession"];
   initialHasVoted: RouterOutputs["voter"]["hasVoted"];
+  multiSelect?: boolean;
+  maxSelect?: number;
+  disabled?: boolean;
 }
 
 const formSchema = z.object({
-  candidates: z.array(z.string()),
+  votes: z.array(
+    z.object({
+      electionCandidateId: z.string().optional(),
+      electionStatuteChangeId: z.string().optional(),
+    }),
+  ),
 });
-
 export function VotingBallot({
   initialSession,
   initialHasVoted,
+  multiSelect = false,
+  maxSelect = 1,
+  disabled = false,
 }: VotingBallotProps) {
   const [session, setSession] = useState(initialSession);
-  const [selectedCandidates, setSelectedCandidates] = useState<
-    Record<number, string>
-  >({});
   const [alreadyVoted, setAlreadyVoted] = useState(initialHasVoted);
-
   const toast = useToast();
-
+  const { data: me } = api.auth.me.useQuery();
+  const email = me?.email;
   const utils = api.useUtils();
-
+  const { data: activeSession } = api.voter.activeSession.useQuery();
   const form = useForm<z.infer<typeof formSchema>>({
-    defaultValues: { candidates: [] },
+    defaultValues: { votes: [] },
     resolver: zodResolver(formSchema),
   });
 
-  const { data: activeSession } = api.voter.activeSession.useQuery();
+  const [selectedCandidates, setSelectedCandidates] = useState<
+    Record<string, string[]>
+  >({});
 
-  //Every 15 seconds, invalidate the active session query to get the latest active session
+  const [selectedStatuteChanges, setSelectedStatuteChanges] = useState<
+    Record<string, string[]>
+  >({});
+
+  useEffect(() => {
+    socket.on("connect", () => {
+      console.log(email + " connected to the socket server");
+    });
+    socket.on("vote", (msg) => {
+      console.log("message: " + msg);
+    });
+    socket.on("newSession", async (sessionId) => {
+      console.log("Session updated:", sessionId);
+      await utils.voter.activeSession.invalidate();
+    });
+    return () => {
+      socket.disconnect();
+    };
+  }, [email, utils.voter.activeSession]);
+
+  /*
   useEffect(() => {
     const interval = setInterval(() => {
       utils.voter.activeSession
@@ -70,7 +93,7 @@ export function VotingBallot({
     }, 10000);
     return () => clearInterval(interval);
   }, [utils.voter.activeSession]);
-
+*/
   useEffect(() => {
     if (activeSession) {
       setSession(activeSession);
@@ -82,21 +105,17 @@ export function VotingBallot({
     return null;
   }
 
-  const { data: hasVoted } = api.voter.hasVoted.useQuery({
-    sessionId: session.id,
-  });
-
-  const { mutateAsync: vote, error } = api.voter.vote.useMutation({
-    async onSuccess(data) {
+  const { mutateAsync: vote } = api.voter.vote.useMutation({
+    async onSuccess() {
       form.reset();
       toast.toast({
         title: "Success",
         description: "Vote submitted successfully",
       });
-      console.log("data: ", data);
+      socket.emit("vote");
       await utils.voter.activeSession.invalidate();
+      setAlreadyVoted(true);
     },
-
     async onError() {
       toast.toast({
         title: "Error",
@@ -110,101 +129,166 @@ export function VotingBallot({
     return null;
   }
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    console.log("data", data);
+  const handleSubmit = async () => {
+    const isSelectionValid = Object.values(selectedCandidates).every(
+      (selection) => {
+        return multiSelect
+          ? selection.length <= maxSelect
+          : selection.length === 1;
+      },
+    );
 
-    // Check if all positions have a corresponding candidate selected
-    if (session.positions.length !== data.candidates.filter(Boolean).length) {
+    if (!isSelectionValid) {
       toast.toast({
-        title: "Error",
-        description: "You must vote for all positions before submitting",
+        title: "Invalid Selection",
+        description: `Please make a valid selection for each position.`,
         variant: "destructive",
       });
       return;
     }
 
-    await vote({
-      electionCandidateIds: data.candidates,
-      sessionId: session.id,
-    });
-    setAlreadyVoted(true);
-  };
+    const candidateVotes = Object.entries(selectedCandidates)
+      .map(([positionId, candidateIds]) => {
+        return candidateIds.map((candidateId) => {
+          return {
+            electionCandidateId: candidateId,
+            electionStatuteChangeId: undefined,
+          };
+        });
+      })
+      .flat();
 
-  const { control, setValue } = form;
+    const statuteChangeVotes = Object.keys(selectedStatuteChanges).map(
+      (statuteChangeId) => {
+        return {
+          electionCandidateId: undefined,
+          electionStatuteChangeId: statuteChangeId,
+        };
+      },
+    );
+
+    await vote({
+      sessionId: session.id,
+      votes: [...candidateVotes, ...statuteChangeVotes],
+    });
+  };
 
   if (alreadyVoted) {
     return <AlreadyVoted />;
   }
 
+  const handleCardClick = (positionId: string, candidateId: string) => {
+    setSelectedCandidates((prevSelected) => {
+      const updatedSelection = [...(prevSelected[positionId] ?? [])];
+      if (multiSelect) {
+        const index = updatedSelection.indexOf(candidateId);
+        if (index > -1) {
+          updatedSelection.splice(index, 1);
+        } else {
+          if (!maxSelect || updatedSelection.length < maxSelect) {
+            updatedSelection.push(candidateId);
+          }
+        }
+      } else {
+        updatedSelection.length = 0; // Clear the array
+        updatedSelection.push(candidateId);
+      }
+      return { ...prevSelected, [positionId]: updatedSelection };
+    });
+  };
+
   return (
-    <Card className="w-full md:w-1/4">
-      <CardHeader>
-        <CardTitle>{session.name}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            {activeSession.positions.map((position, index) => (
-              <FormField
-                control={form.control}
-                name={`candidates.${index}`}
-                key={position.id}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{position.name}</FormLabel>
-                    <FormControl>
-                      <div key={position.id}>
-                        {position.candidates.map((candidate) => (
-                          <Card
-                            key={candidate.id}
-                            //Hightlight selected candidates
-                            className={`${
-                              selectedCandidates[index] === candidate.id
-                                ? "bg-blue-100"
-                                : ""
-                            }`}
-                            onClick={() => {
-                              setSelectedCandidates((prev) => {
-                                const prevForPosition = prev[index] || "";
-                                const newForPosition =
-                                  prevForPosition === candidate.id
-                                    ? ""
-                                    : candidate.id;
-                                return { ...prev, [index]: newForPosition };
-                              });
-                              const newValue = Array.isArray(field.value)
-                                ? [...field.value]
-                                : [];
-                              const candidateIndex = newValue.indexOf(
-                                candidate.id,
-                              );
-                              if (candidateIndex === -1) {
-                                newValue[index] = candidate.id;
-                              } else {
-                                newValue[index] = "";
-                              }
-                              setValue(`candidates.${index}`, newValue[index]); // Update form state using setValue
-                            }}
-                          >
-                            <CardHeader>
-                              <CardTitle>{candidate.name}</CardTitle>
-                            </CardHeader>
-                          </Card>
-                        ))}
-                      </div>
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            ))}
-            <CardFooter>
-              <Button disabled={form.formState.isSubmitting} type="submit">
-                Submit
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col items-center justify-center">
+      <h1 className="text-2xl font-bold">{session?.name}</h1>
+      <div className="grid grid-cols-1 gap-4">
+        {session?.positions.map((position) => (
+          <Card key={position.id}>
+            <CardHeader>
+              <CardTitle>{position.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4">
+                {position.candidates.map((candidate) => (
+                  <Card
+                    key={candidate.id}
+                    onClick={() => handleCardClick(position.id, candidate.id)}
+                    className={`${
+                      selectedCandidates[position.id]?.includes(candidate.id)
+                        ? "border-2 border-blue-500"
+                        : ""
+                    }`}
+                  >
+                    <CardHeader>
+                      <CardTitle>{candidate.name}</CardTitle>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {session?.statuteChanges.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Statute Changes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 gap-4">
+                {session?.statuteChanges.map((statuteChange) => (
+                  <Card
+                    key={statuteChange.id}
+                    onClick={() =>
+                      setSelectedStatuteChanges((prevSelected) => {
+                        const updatedSelection = [
+                          ...(prevSelected[statuteChange.id] ?? []),
+                        ];
+                        if (multiSelect) {
+                          const index = updatedSelection.indexOf(
+                            statuteChange.id,
+                          );
+                          if (index > -1) {
+                            updatedSelection.splice(index, 1);
+                          } else {
+                            if (
+                              !maxSelect ||
+                              updatedSelection.length < maxSelect
+                            ) {
+                              updatedSelection.push(statuteChange.id);
+                            }
+                          }
+                        } else {
+                          updatedSelection.length = 0; // Clear the array
+                          updatedSelection.push(statuteChange.id);
+                        }
+                        return {
+                          ...prevSelected,
+                          [statuteChange.id]: updatedSelection,
+                        };
+                      })
+                    }
+                    className={`${
+                      selectedStatuteChanges[statuteChange.id]?.includes(
+                        statuteChange.id,
+                      )
+                        ? "border-2 border-blue-500"
+                        : ""
+                    }`}
+                  >
+                    <CardHeader>
+                      <CardTitle>{statuteChange.name}</CardTitle>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      <CardFooter>
+        <Button disabled={disabled} onClick={handleSubmit} className="w-full">
+          Submit
+        </Button>
+      </CardFooter>
+    </div>
   );
 }

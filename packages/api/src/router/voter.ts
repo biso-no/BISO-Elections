@@ -60,42 +60,28 @@ export const votersRouter = createTRPCRouter({
       });
     }),
   sessionById: protectedProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string().optional() }))
     .query(({ ctx, input }) => {
+      if (!input.id) {
+        return null;
+      }
+
       return ctx.db.query.electionSession.findFirst({
         where: eq(schema.electionSession.id, input.id),
         with: {
-          positions: {
+          statuteChanges: {
             columns: {
-              id: true,
               name: true,
-            },
-            with: {
-              candidates: {
-                columns: {
-                  id: true,
-                  name: true,
-                },
-              },
+              sessionId: true,
+              id: true,
             },
           },
-        },
-      });
-    }),
-  activeSessionId: protectedProcedure
-    .input(z.object({ id: z.string() }))
-    .query(({ ctx }) => {
-      return ctx.db.query.electionSession.findFirst({
-        where: eq(schema.electionSession.status, "in_progress"),
-        columns: {
-          id: true,
-          name: true,
-          status: true,
-          description: true,
-          electionId: true,
-          type: true,
-        },
-        with: {
+          election: {
+            columns: {
+              name: true,
+              id: true,
+            },
+          },
           positions: {
             columns: {
               id: true,
@@ -118,6 +104,13 @@ export const votersRouter = createTRPCRouter({
     return ctx.db.query.electionSession.findFirst({
       where: eq(schema.electionSession.status, "in_progress"),
       with: {
+        statuteChanges: {
+          columns: {
+            name: true,
+            sessionId: true,
+            id: true,
+          },
+        },
         election: {
           columns: {
             name: true,
@@ -144,7 +137,12 @@ export const votersRouter = createTRPCRouter({
   vote: protectedProcedure
     .input(
       z.object({
-        electionCandidateIds: z.array(z.string().min(1)),
+        votes: z.array(
+          z.object({
+            electionCandidateId: z.string().optional(), // Allow for position vote
+            electionStatuteChangeId: z.string().optional(), // Allow for statute change vote
+          }),
+        ),
         sessionId: z.string().min(1),
       }),
     )
@@ -161,20 +159,48 @@ export const votersRouter = createTRPCRouter({
         throw new Error("You have already voted for this session");
       }
 
-      // Insert a vote for each candidate
-      const votes = input.electionCandidateIds.map((candidateId) =>
-        ctx.db
-          .insert(schema.electionVote)
-          .values({
-            electionCandidateId: candidateId,
-            profileId: ctx.user.id,
-            sessionId: input.sessionId,
-          })
-          .returning(),
-      );
+      const votes = [];
 
-      return Promise.all(votes);
+      // Insert votes for each vote option in the array
+      for (const voteOption of input.votes) {
+        // Insert vote for position (if provided)
+        // Insert vote for statute change (if provided)
+        if (
+          voteOption.electionStatuteChangeId !== null &&
+          voteOption.electionStatuteChangeId !== undefined
+        ) {
+          const statuteChangeVote = ctx.db
+            .insert(schema.electionVote)
+            .values({
+              statuteChangeId: voteOption.electionStatuteChangeId,
+              profileId: ctx.user.id,
+              sessionId: input.sessionId,
+            })
+            .returning();
+          votes.push(statuteChangeVote);
+        }
+
+        // Insert vote for statute change (if provided)
+        if (voteOption.electionStatuteChangeId) {
+          const statuteChangeVote = ctx.db
+            .insert(schema.electionVote)
+            .values({
+              statuteChangeId: voteOption.electionStatuteChangeId,
+              profileId: ctx.user.id,
+              sessionId: input.sessionId,
+            })
+            .returning();
+          votes.push(statuteChangeVote);
+        }
+      }
+
+      // Wait for all votes to be inserted
+      const insertedVotes = await Promise.all(votes);
+
+      // Return inserted votes
+      return insertedVotes;
     }),
+
   hasVoted: protectedProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(async ({ ctx, input }) => {
