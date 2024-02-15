@@ -2,7 +2,7 @@ import React from "react";
 import { FileTextIcon } from "@radix-ui/react-icons";
 import {
   Document,
-  Font,
+  Image,
   Page,
   PDFViewer,
   StyleSheet,
@@ -21,58 +21,26 @@ import {
 } from "~/components/ui/dialog";
 import { api } from "~/trpc/react";
 
-// Sample data representing election results
-const electionResults = [
-  {
-    session: "Session 1",
-    positions: [
-      {
-        title: "President",
-        candidates: [
-          { name: "Candidate A", votes: 150 },
-          { name: "Candidate B", votes: 200 },
-          { name: "Candidate C", votes: 180 },
-        ],
-      },
-      {
-        title: "Vice President",
-        candidates: [
-          { name: "Candidate X", votes: 220 },
-          { name: "Candidate Y", votes: 190 },
-          { name: "Candidate Z", votes: 170 },
-        ],
-      },
-    ],
-  },
-  {
-    session: "Session 2",
-    positions: [
-      {
-        title: "President",
-        candidates: [
-          { name: "Candidate A", votes: 150 },
-          { name: "Candidate B", votes: 200 },
-          { name: "Candidate C", votes: 180 },
-        ],
-      },
-      {
-        title: "Vice President",
-        candidates: [
-          { name: "Candidate X", votes: 220 },
-          { name: "Candidate Y", votes: 190 },
-          { name: "Candidate Z", votes: 170 },
-        ],
-      },
-    ],
-  },
-];
-
 // Define styles for PDF components
 const styles = StyleSheet.create({
   page: {
     flexDirection: "column",
-    padding: 20,
-    backgroundColor: "#f6f6f5",
+    padding: 40,
+    backgroundColor: "#FFFFFF",
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  logo: {
+    width: 50,
+    height: 50,
+  },
+  companyDetails: {
+    fontSize: 10,
+    color: "#555",
   },
   section: {
     margin: 10,
@@ -83,28 +51,23 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 10,
-    color: "#3d3d3c",
+    color: "#000",
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 5,
-    color: "#3d3d3c",
+    color: "#333",
   },
   text: {
     fontSize: 12,
     marginBottom: 5,
-    color: "#3d3d3c",
-  },
-  candidate: {
-    fontSize: 12,
-    marginBottom: 5,
-    marginLeft: 10,
-    color: "#3d3d3c",
+    color: "#666",
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomColor: "#000",
+    borderBottomColor: "#DDD",
     borderBottomWidth: 1,
     alignItems: "center",
     height: 24,
@@ -112,29 +75,29 @@ const styles = StyleSheet.create({
   },
   tableCol: {
     width: "50%",
-    borderRightColor: "#000",
-    borderRightWidth: 1,
     textAlign: "center",
   },
   tableCell: {
     margin: "auto",
     marginTop: 5,
     fontSize: 10,
+    color: "#666",
   },
   totalVotes: {
     fontSize: 12,
     marginTop: 10,
-    color: "#3d3d3c",
+    color: "#666",
+    fontWeight: "bold",
   },
 });
 
 interface ElectionResults {
   electionResults: RouterOutputs["elections"]["results"];
 }
+
 // Define the PDF component
 function ElectionResultsPDF({ electionResults }: ElectionResults) {
-  //Total votes for each position
-  //Total votes for each position
+  // Total votes for each position
   const totalVotes = (
     candidates: { votes: { id: string; electionCandidateId: string }[] }[],
   ) => candidates.reduce((acc, candidate) => acc + candidate.votes.length, 0);
@@ -143,6 +106,10 @@ function ElectionResultsPDF({ electionResults }: ElectionResults) {
     <Document>
       {electionResults?.sessions.map((session, index) => (
         <Page key={index} size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <Text style={styles.companyDetails}>BI Student Organisation</Text>
+            <Image style={styles.logo} src="logos/logo-light.svg" />
+          </View>
           <View style={styles.section}>
             <Text style={styles.title}>Election Results</Text>
             <Text style={styles.subtitle}>Session: {session.name}</Text>
@@ -167,6 +134,25 @@ function ElectionResultsPDF({ electionResults }: ElectionResults) {
                 ))}
                 <Text style={styles.totalVotes}>
                   Total Votes: {totalVotes(position.candidates)}
+                </Text>
+              </View>
+            ))}
+            {/* Render statute changes here */}
+            {session.statuteChanges?.map((statuteChange, index) => (
+              <View key={index}>
+                <Text style={styles.subtitle}>{statuteChange.name}</Text>
+                {statuteChange.options.map((option, idx) => (
+                  <View key={idx} style={styles.tableRow}>
+                    <Text style={[styles.tableCol, styles.tableCell]}>
+                      {option.name}
+                    </Text>
+                    <Text style={[styles.tableCol, styles.tableCell]}>
+                      {option.votes.length}
+                    </Text>
+                  </View>
+                ))}
+                <Text style={styles.totalVotes}>
+                  Total Votes: {totalVotes(statuteChange.options)}
                 </Text>
               </View>
             ))}

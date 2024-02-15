@@ -86,17 +86,33 @@ export const electionsRouter = createTRPCRouter({
       z.object({
         sessionId: z.string().min(1),
         name: z.string().min(1),
+        maxSelections: z.number().optional(),
+        withAbstain: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       // Check if the user is an admin of the election
-      return ctx.db
+      const [position] = await ctx.db
         .insert(schema.electionPosition)
         .values({
           name: input.name,
           sessionId: input.sessionId,
+          maxSelections: input.maxSelections,
+          withAbstain: input.withAbstain,
         })
         .returning();
+
+      if (!position) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create position",
+        });
+      }
+
+      await ctx.db.insert(schema.electionCandidate).values({
+        name: "Abstain",
+        electionPositionId: position.id,
+      });
     }),
   createStatuteChange: adminProcedure
     .input(
@@ -108,11 +124,36 @@ export const electionsRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       // Check if the user is an admin of the election
-      return ctx.db.insert(schema.electionStatuteChange).values({
-        name: input.content,
-        withAbstain: input.withAbstain,
-        sessionId: input.sessionId,
-      });
+      const [statuteChange] = await ctx.db
+        .insert(schema.electionStatuteChange)
+        .values({
+          name: input.content,
+          withAbstain: input.withAbstain,
+          sessionId: input.sessionId,
+        })
+        .returning();
+
+      if (!statuteChange) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create statute change",
+        });
+      }
+
+      await ctx.db.insert(schema.electionStatuteChangeOptions).values([
+        { name: "yes", changeId: statuteChange.id },
+        { name: "no", changeId: statuteChange.id },
+      ]);
+
+      // If withAbstain is true, create 'abstain' option
+      if (input.withAbstain) {
+        await ctx.db.insert(schema.electionStatuteChangeOptions).values({
+          name: "abstain",
+          changeId: statuteChange.id,
+        });
+      }
+
+      return statuteChange;
     }),
   deleteStatuteChange: adminProcedure
     .input(
@@ -135,8 +176,16 @@ export const electionsRouter = createTRPCRouter({
             columns: {
               name: true,
               sessionId: true,
-              withAbstain: true,
               id: true,
+              withAbstain: true,
+            },
+            with: {
+              options: {
+                columns: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
           election: {
@@ -149,6 +198,7 @@ export const electionsRouter = createTRPCRouter({
             columns: {
               id: true,
               name: true,
+              maxSelections: true,
             },
             with: {
               candidates: {
@@ -210,7 +260,7 @@ export const electionsRouter = createTRPCRouter({
               columns: {
                 id: true,
                 candidateId: true,
-                statuteChangeId: true,
+                statuteChangeOptionId: true,
               },
             },
           },
@@ -458,13 +508,11 @@ export const electionsRouter = createTRPCRouter({
   votersWhoHaveNotVoted: protectedProcedure
     .input(
       z.object({
-        electionId: z.string(),
         sessionId: z.string(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const voters = await ctx.db.query.electionVoter.findMany({
-        where: eq(schema.electionVoter.electionId, input.electionId),
         with: {
           profile: {
             columns: {
@@ -489,6 +537,11 @@ export const electionsRouter = createTRPCRouter({
         date: true,
       },
       with: {
+        voters: {
+          columns: {
+            vote_weight: true,
+          },
+        },
         sessions: {
           columns: {
             name: true,
@@ -508,7 +561,27 @@ export const electionsRouter = createTRPCRouter({
                       columns: {
                         id: true,
                         candidateId: true,
-                        statuteChangeId: true,
+                        statuteChangeOptionId: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            statuteChanges: {
+              columns: {
+                name: true,
+              },
+              with: {
+                options: {
+                  columns: {
+                    name: true,
+                  },
+                  with: {
+                    votes: {
+                      columns: {
+                        id: true,
+                        statuteChangeOptionId: true,
                       },
                     },
                   },
@@ -520,4 +593,50 @@ export const electionsRouter = createTRPCRouter({
       },
     });
   }),
+  sessionResults: adminProcedure
+    .input(
+      z.object({
+        sessionId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.db.query.electionSession.findFirst({
+        where: eq(schema.electionSession.id, input.sessionId),
+        columns: {
+          id: true,
+          name: true,
+        },
+        with: {
+          positions: {
+            with: {
+              candidates: {
+                with: {
+                  votes: {
+                    columns: {
+                      id: true,
+                      candidateId: true,
+                      statuteChangeOptionId: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+          statuteChanges: {
+            with: {
+              options: {
+                with: {
+                  votes: {
+                    columns: {
+                      id: true,
+                      statuteChangeOptionId: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+    }),
 });

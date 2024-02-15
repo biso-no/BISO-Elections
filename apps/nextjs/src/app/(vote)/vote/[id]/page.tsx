@@ -1,5 +1,5 @@
+import { VotingBallot } from "~/app/_components/voting-ballot";
 import { api } from "~/trpc/server";
-import { VotingBallot } from "../_components/voting-ballot";
 
 export default async function VotingPage({
   params,
@@ -12,14 +12,9 @@ export default async function VotingPage({
     return null;
   }
 
-  const hasVoted = false;
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-2">
-      <VotingBallot
-        initialSession={initialSession}
-        initialHasVoted={hasVoted}
-      />
+      <VotingBallot />
     </div>
   );
 }

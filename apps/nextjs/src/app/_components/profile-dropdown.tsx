@@ -55,9 +55,6 @@ export function ProfileDropdown({ user }) {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>Settings</DropdownMenuItem>
-        <DropdownMenuItem>Support</DropdownMenuItem>
-        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut}>
           {user ? "Sign out" : "Sign in"}
         </DropdownMenuItem>

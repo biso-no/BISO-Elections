@@ -17,15 +17,13 @@ import { api } from "~/trpc/react";
 
 interface NotYetVotedProps {
   sessionId: string;
-  electionId: string;
 }
 
-export function NotYetVoted({ sessionId, electionId }: NotYetVotedProps) {
+export function NotYetVoted({ sessionId }: NotYetVotedProps) {
   const utils = api.useUtils();
 
   const { data: notVoted } = api.elections.votersWhoHaveNotVoted.useQuery({
     sessionId: sessionId,
-    electionId: electionId,
   });
 
   const [votersNotVoted, setVotersNotVoted] = useState<

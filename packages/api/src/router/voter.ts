@@ -75,6 +75,14 @@ export const votersRouter = createTRPCRouter({
               sessionId: true,
               id: true,
             },
+            with: {
+              options: {
+                columns: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
           },
           election: {
             columns: {
@@ -86,6 +94,7 @@ export const votersRouter = createTRPCRouter({
             columns: {
               id: true,
               name: true,
+              maxSelections: true,
             },
             with: {
               candidates: {
@@ -110,6 +119,14 @@ export const votersRouter = createTRPCRouter({
             sessionId: true,
             id: true,
           },
+          with: {
+            options: {
+              columns: {
+                id: true,
+                name: true,
+              },
+            },
+          },
         },
         election: {
           columns: {
@@ -121,6 +138,7 @@ export const votersRouter = createTRPCRouter({
           columns: {
             id: true,
             name: true,
+            maxSelections: true,
           },
           with: {
             candidates: {
@@ -139,8 +157,8 @@ export const votersRouter = createTRPCRouter({
       z.object({
         votes: z.array(
           z.object({
-            electionCandidateId: z.string().optional(), // Allow for position vote
-            electionStatuteChangeId: z.string().optional(), // Allow for statute change vote
+            electionCandidateId: z.string().optional(),
+            electionStatuteChangeOptionId: z.string().optional(),
           }),
         ),
         sessionId: z.string().min(1),
@@ -159,38 +177,26 @@ export const votersRouter = createTRPCRouter({
         throw new Error("You have already voted for this session");
       }
 
+      const voter = await ctx.db.query.electionVoter.findFirst({
+        where: eq(schema.electionVoter.profileId, ctx.user.id),
+      });
+
+      const vote_weight = voter?.vote_weight ?? 1;
       const votes = [];
 
-      // Insert votes for each vote option in the array
       for (const voteOption of input.votes) {
-        // Insert vote for position (if provided)
-        // Insert vote for statute change (if provided)
-        if (
-          voteOption.electionStatuteChangeId !== null &&
-          voteOption.electionStatuteChangeId !== undefined
-        ) {
-          const statuteChangeVote = ctx.db
-            .insert(schema.electionVote)
-            .values({
-              statuteChangeId: voteOption.electionStatuteChangeId,
-              profileId: ctx.user.id,
-              sessionId: input.sessionId,
-            })
-            .returning();
-          votes.push(statuteChangeVote);
-        }
-
-        // Insert vote for statute change (if provided)
-        if (voteOption.electionStatuteChangeId) {
-          const statuteChangeVote = ctx.db
-            .insert(schema.electionVote)
-            .values({
-              statuteChangeId: voteOption.electionStatuteChangeId,
-              profileId: ctx.user.id,
-              sessionId: input.sessionId,
-            })
-            .returning();
-          votes.push(statuteChangeVote);
+        for (let i = 0; i < vote_weight; i++) {
+          votes.push(
+            ctx.db
+              .insert(schema.electionVote)
+              .values({
+                candidateId: voteOption.electionCandidateId,
+                statuteChangeOptionId: voteOption.electionStatuteChangeOptionId,
+                profileId: ctx.user.id,
+                sessionId: input.sessionId,
+              })
+              .returning(),
+          );
         }
       }
 
@@ -200,7 +206,6 @@ export const votersRouter = createTRPCRouter({
       // Return inserted votes
       return insertedVotes;
     }),
-
   hasVoted: protectedProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(async ({ ctx, input }) => {

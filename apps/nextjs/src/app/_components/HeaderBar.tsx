@@ -2,8 +2,6 @@ import Link from "next/link";
 
 import { ModeToggle } from "~/components/theme-toggle";
 import { getUser } from "../auth/actions";
-import { CommandModal } from "./CommandModal";
-import { NotificationCenter } from "./notification-center";
 import { ProfileDropdown } from "./profile-dropdown";
 
 export async function HeaderBar() {
@@ -11,20 +9,13 @@ export async function HeaderBar() {
 
   return (
     <>
-      <header className="flex h-14 items-center gap-4 px-6">
+      <header className="top-10 flex h-14 items-center gap-4 px-6">
         <Link className="lg:hidden" href="#">
           <VoteIcon className="h-6 w-6" />
           <span className="sr-only">Home</span>
         </Link>
-        <div className="w-full flex-1">
-          <form>
-            <div className="relative">
-              <CommandModal />
-            </div>
-          </form>
-        </div>
+        <div className="w-full flex-1"></div>
         <ModeToggle />
-        <NotificationCenter />
         <ProfileDropdown user={user} />
       </header>
     </>

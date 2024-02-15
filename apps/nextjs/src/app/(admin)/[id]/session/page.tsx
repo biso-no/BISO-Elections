@@ -7,7 +7,6 @@ import * as z from "zod";
 
 import { PDFResults } from "~/app/_components/pdf-results";
 import { VotesDialog } from "~/app/_components/votes-dialog";
-import { VotingBallot } from "~/app/_components/voting-ballot";
 import { PopoverActions } from "~/components/popover-actions";
 import {
   Accordion,
@@ -16,7 +15,6 @@ import {
   AccordionTrigger,
 } from "~/components/ui/accordion";
 import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -43,9 +41,11 @@ import {
 } from "~/components/ui/table";
 import { useToast } from "~/components/ui/use-toast";
 import { useElectionId } from "~/lib/hooks/useElectionId";
-import { socket } from "~/lib/io";
 import { api } from "~/trpc/react";
+import { CreatePosition } from "./_components/create-position";
+import { CreateSession } from "./_components/create-session";
 import { CreateStatuteChange } from "./_components/create-statute-change";
+import { PreviewSession } from "./_components/preview-session";
 
 const formSchema = z.object({
   name: z.string().min(1),
@@ -84,52 +84,6 @@ export default function SessionPage() {
 
   const { data: sessions } = api.elections.sessions.useQuery(electionId);
 
-  const { mutateAsync: createSession, error } =
-    api.elections.createSession.useMutation({
-      async onSuccess() {
-        form.reset();
-        toast.toast({
-          title: "Session created",
-          description: "The session has been created",
-        });
-        await utils.elections.sessions.invalidate();
-      },
-
-      async onError() {
-        toast.toast({
-          title: "Error",
-          description: "Something went wrong",
-          variant: "destructive",
-        });
-      },
-    });
-
-  const { mutateAsync: createPosition, error: positionError } =
-    api.elections.createPosition.useMutation({
-      async onSuccess() {
-        form.reset();
-        await utils.elections.sessions.invalidate();
-      },
-
-      async onError() {
-        console.log("Error: ", error);
-      },
-    });
-
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    try {
-      console.log(data);
-      await createSession({ ...data, electionId });
-    } catch {
-      console.log("Error: ", error);
-      toast.toast({
-        title: "Error",
-        description: error?.message,
-        variant: "destructive",
-      });
-    }
-  };
-
   const { mutateAsync: deleteSession, error: deleteError } =
     api.elections.deleteSession.useMutation({
       async onSuccess() {
@@ -148,29 +102,6 @@ export default function SessionPage() {
         });
       },
     });
-
-  const onPositionCreated = async (
-    formData: { name: string },
-    sessionId: string,
-  ) => {
-    try {
-      await createPosition({
-        name: formData.name,
-        sessionId: sessionId,
-      });
-      toast.toast({
-        title: "Position created",
-        description: "The position has been created",
-      });
-    } catch {
-      console.log("Error: ", error);
-      toast.toast({
-        title: "Error",
-        description: positionError?.message,
-        variant: "destructive",
-      });
-    }
-  };
 
   const { mutateAsync: createCandidate, error: candidateError } =
     api.elections.createCandidate.useMutation({
@@ -193,30 +124,16 @@ export default function SessionPage() {
         name: formData.name,
         electionPositionId: positionId,
       });
-      toast.toast({
-        title: "Candidate created",
-        description: "The candidate has been created",
-      });
-    } catch {
+    } catch (error) {
       console.log("Error: ", error);
-      toast.toast({
-        title: "Error",
-        description: candidateError?.message,
-        variant: "destructive",
-      });
     }
   };
 
   const onDelete = async (sessionId: string) => {
     try {
       await deleteSession(sessionId);
-    } catch {
+    } catch (error) {
       console.log("Error: ", error);
-      toast.toast({
-        title: "Error",
-        description: error?.message,
-        variant: "destructive",
-      });
     }
   };
 
@@ -242,16 +159,10 @@ export default function SessionPage() {
   const onCandidateDelete = async (candidateId: string) => {
     try {
       await deleteCandidate(candidateId);
-    } catch {
+    } catch (error) {
       console.log("Error: ", error);
-      toast.toast({
-        title: "Error",
-        description: deleteCandidateError?.message,
-        variant: "destructive",
-      });
     }
   };
-
   const { mutateAsync: updateSession, error: updateSessionError } =
     api.elections.updateSession.useMutation({
       async onSuccess() {
@@ -293,13 +204,8 @@ export default function SessionPage() {
   const onStatuteChangeDelete = async (statuteChangeId: string) => {
     try {
       await deleteStatuteChange({ id: statuteChangeId });
-    } catch {
+    } catch (error) {
       console.log("Error: ", error);
-      toast.toast({
-        title: "Error",
-        description: deleteStatuteChangeError?.message,
-        variant: "destructive",
-      });
     }
   };
 
@@ -327,7 +233,6 @@ export default function SessionPage() {
         id: sessionId,
         status: statuses[(currentStatusIndex + 1) % statuses.length] as Status,
       });
-      socket.emit("sessionUpdated", sessionId);
     }
   };
 
@@ -337,36 +242,7 @@ export default function SessionPage() {
         <h1 className="text-lg font-semibold md:text-2xl">Sessions</h1>
         <div className="flex space-x-4">
           <PDFResults electionId={electionId} />
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button size="sm">Add Session</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)}>
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Session name</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="Session name" />
-                        </FormControl>
-                        <FormDescription>
-                          This is the name of the session
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button type="submit">Add session</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+          <CreateSession electionId={electionId} />
         </div>
       </div>
       <div className="rounded-lg border shadow-sm">
@@ -391,23 +267,7 @@ export default function SessionPage() {
                     >
                       Delete
                     </Button>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button className="ml-auto" variant="outline">
-                          Preview
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <h2 className="text-lg font-semibold md:text-2xl">
-                          {session.name}
-                        </h2>
-                        <VotingBallot
-                          initialSession={session}
-                          preview
-                          initialHasVoted={false}
-                        />
-                      </DialogContent>
-                    </Dialog>
+                    <PreviewSession session={session} />
                     <Button
                       onClick={() =>
                         onSessionToggle(
@@ -430,54 +290,13 @@ export default function SessionPage() {
                           ? "Completed"
                           : "Activate"}
                     </Button>
-                    <VotesDialog
-                      sessionId={session.id}
-                      electionId={electionId}
-                    />
+                    <VotesDialog sessionId={session.id} />
                   </div>
                   {/*Preview button that opens a dialog with the voting ballot*/}
                   <>
                     <div className="mt-4 flex items-center justify-between">
                       <div className="flex space-x-4">
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button className="ml-auto" size="sm">
-                              Add Position
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <Form {...form}>
-                              <form
-                                onSubmit={form.handleSubmit((data) =>
-                                  onPositionCreated(data, session.id),
-                                )}
-                              >
-                                <FormField
-                                  control={form.control}
-                                  name="name"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Position name</FormLabel>
-                                      <FormControl>
-                                        <Input
-                                          {...field}
-                                          placeholder="Position name"
-                                        />
-                                      </FormControl>
-                                      <FormDescription>
-                                        This is the name of the position
-                                      </FormDescription>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <DialogFooter>
-                                  <Button type="submit">Add position</Button>
-                                </DialogFooter>
-                              </form>
-                            </Form>
-                          </DialogContent>
-                        </Dialog>
+                        <CreatePosition sessionId={session.id} />
                         <CreateStatuteChange sessionId={session.id} />
                       </div>
                     </div>

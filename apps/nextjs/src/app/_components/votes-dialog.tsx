@@ -1,10 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
-
-import type { RouterOutputs } from "@acme/api";
-
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -29,97 +24,96 @@ import { NotYetVoted } from "./not-yet-voted";
 
 interface VotesDialog {
   sessionId: string;
-  electionId: string;
 }
 
-export function VotesDialog({ sessionId, electionId }: VotesDialog) {
-  const utils = api.useUtils();
-
-  const { data: session } = api.elections.session.useQuery(sessionId);
-  const [positions, setPositions] = useState<
-    RouterOutputs["elections"]["positions"] | null
-  >(null);
-
-  //This query returns all votes for each candidate in the session.
-  const { data: fetchedPositions } =
-    api.elections.positions.useQuery(sessionId);
-
-  useEffect(() => {
-    if (fetchedPositions) {
-      setPositions(fetchedPositions);
-    }
-  }, [fetchedPositions]);
-  /*
-  useEffect(() => {
-    //Every 5 seconds, the positions query is invalidated and refetched.
-    const interval = setInterval(() => {
-      utils.elections.positions.invalidate(sessionId).catch(console.error);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [sessionId, utils.elections.positions]);
-  */
-
-  useEffect(() => {
-    const socket = io("http://localhost:3001");
-
-    socket.on("newVote", (voteData) => {
-      console.log("New vote received:", voteData);
-      utils.elections.votes.invalidate(sessionId).catch(console.error);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [sessionId, utils.elections.votes]);
+export function VotesDialog({ sessionId }: VotesDialog) {
+  const { data: results } = api.elections.sessionResults.useQuery({
+    sessionId,
+  });
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
+      <DialogTrigger>
         <Button>View Votes</Button>
       </DialogTrigger>
-
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{session?.name}</DialogTitle>
-          <DialogClose />
-        </DialogHeader>
-        <div className="flex space-x-4">
+        <DialogTitle>Results</DialogTitle>
+        <DialogClose />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {" "}
+          {/* Use CSS grid for better responsiveness */}
           <div>
-            {positions?.map((position) => (
-              <Table key={position.id}>
-                <TableCaption>{position.name}</TableCaption>
-                <TableHeader>
-                  <TableRow key={position.id} className="flex-row">
-                    <TableHead>Candidate</TableHead>
-                    <TableHead>Votes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {position.candidates.map((candidate) => (
-                    <TableRow key={candidate.id}>
-                      <TableCell>{candidate.name}</TableCell>
-                      <TableCell>{candidate.votes.length}</TableCell>
+            <div className="mb-4">Positions</div>
+            {results?.positions.map((position) => (
+              <div key={position.id} className="mb-4">
+                <Table>
+                  <TableCaption>{position.name}</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Option</TableHead>
+                      <TableHead>Count</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-                <TableFooter>
-                  <TableRow>
-                    <TableCell>Total</TableCell>
-                    <TableCell>
-                      {position.candidates.reduce(
-                        (acc, candidate) => acc + candidate.votes.length,
-                        0,
-                      )}
-                    </TableCell>
-                  </TableRow>
-                </TableFooter>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {position.candidates.map((option) => (
+                      <TableRow key={option.id}>
+                        <TableCell>{option.name}</TableCell>
+                        <TableCell>{option.votes.length}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>Total Votes</TableCell>
+                      <TableCell>
+                        {position.candidates.reduce(
+                          (total, option) => total + option.votes.length,
+                          0,
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </div>
             ))}
           </div>
           <div>
-            <NotYetVoted sessionId={sessionId} electionId={electionId} />
+            <div className="mb-4">Statute Changes</div>
+            {results?.statuteChanges.map((statute) => (
+              <div key={statute.id} className="mb-4">
+                <Table>
+                  <TableCaption>{statute.name}</TableCaption>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Option</TableHead>
+                      <TableHead>Count</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {statute.options.map((option) => (
+                      <TableRow key={option.id}>
+                        <TableCell>{option.name}</TableCell>
+                        <TableCell>{option.votes.length}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                  <TableFooter>
+                    <TableRow>
+                      <TableCell>Total Votes</TableCell>
+                      <TableCell>
+                        {statute.options.reduce(
+                          (total, option) => total + option.votes.length,
+                          0,
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  </TableFooter>
+                </Table>
+              </div>
+            ))}
           </div>
         </div>
+        <NotYetVoted sessionId={sessionId} />
       </DialogContent>
     </Dialog>
   );

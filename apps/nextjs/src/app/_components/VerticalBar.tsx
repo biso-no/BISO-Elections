@@ -68,8 +68,8 @@ export function VerticalBar() {
   };
 
   return (
-    <div className="hidden lg:block">
-      <Card className="flex h-full max-h-screen flex-col gap-2">
+    <div className="sticky top-0 hidden h-screen lg:block">
+      <Card className="flex h-full flex-col gap-2">
         <CardHeader className="flex h-[60px] items-center px-6">
           <TeamSwitcher />
         </CardHeader>
