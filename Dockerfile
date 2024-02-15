@@ -58,4 +58,6 @@ COPY --from=installer --chown=nextjs:nodejs /app/apps/nextjs/.next/standalone ./
 COPY --from=installer --chown=nextjs:nodejs /app/apps/nextjs/.next/static ./apps/nextjs/.next/static
 COPY --from=installer --chown=nextjs:nodejs /app/apps/nextjs/public ./apps/nextjs/public
 
+RUN pnpm db:push
+
 CMD node apps/nextjs/server.js
