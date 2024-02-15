@@ -32,11 +32,12 @@ COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
 
 ## This would be useful for browser environment variables that are actually baked at build time and you aren't passing them in otherwise.
-# COPY .env.production .env.production  
+COPY .env .env 
 RUN CI=true SKIP_ENV_VALIDATION=true turbo run build --filter=@acme/nextjs...
 
 FROM base AS runner
 WORKDIR /app
+
 
 EXPOSE 3000
 ENV PORT 3000
@@ -52,12 +53,13 @@ USER nextjs
 COPY --from=installer /app/apps/nextjs/next.config.mjs .
 COPY --from=installer /app/apps/nextjs/package.json .
 
+
+
+
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
 COPY --from=installer --chown=nextjs:nodejs /app/apps/nextjs/.next/standalone ./
 COPY --from=installer --chown=nextjs:nodejs /app/apps/nextjs/.next/static ./apps/nextjs/.next/static
 COPY --from=installer --chown=nextjs:nodejs /app/apps/nextjs/public ./apps/nextjs/public
-
-RUN pnpm db:push
 
 CMD node apps/nextjs/server.js
