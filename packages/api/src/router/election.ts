@@ -114,6 +114,22 @@ export const electionsRouter = createTRPCRouter({
         electionPositionId: position.id,
       });
     }),
+  updatePosition: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1),
+        maxSelections: z.number().optional(),
+        withAbstain: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.update(schema.electionPosition).set({
+        name: input.name,
+        maxSelections: input.maxSelections,
+        withAbstain: input.withAbstain,
+      });
+    }),
   createStatuteChange: adminProcedure
     .input(
       z.object({
@@ -503,6 +519,14 @@ export const electionsRouter = createTRPCRouter({
       return ctx.db
         .delete(schema.electionCandidate)
         .where(eq(schema.electionCandidate.id, input));
+    }),
+  deletePosition: adminProcedure
+    .input(z.string())
+    .mutation(async ({ ctx, input }) => {
+      // Check if the user is an admin of the election
+      return ctx.db
+        .delete(schema.electionPosition)
+        .where(eq(schema.electionPosition.id, input));
     }),
   //A procedure to get all voters who have not yet voted for a given session.
   votersWhoHaveNotVoted: protectedProcedure

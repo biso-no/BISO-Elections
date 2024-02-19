@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
+import type { RouterOutputs } from "@acme/api";
+
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import {
@@ -165,6 +167,196 @@ export function CreatePosition({ sessionId }: { sessionId: string }) {
             </DialogFooter>
           </form>
         </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function EditPosition({
+  position,
+}: {
+  position: RouterOutputs["elections"]["sessions"][0]["positions"][0];
+}) {
+  const utils = api.useUtils();
+  const toast = useToast();
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: position.name ?? "",
+      maxSelections: position.maxSelections?.toString() ?? "1",
+    },
+  });
+  if (!position) {
+    return null;
+  }
+  const { mutateAsync: updatePosition, error: positionError } =
+    api.elections.updatePosition.useMutation({
+      async onSuccess() {
+        form.reset();
+        await utils.elections.sessions.invalidate();
+      },
+
+      async onError(error) {
+        console.log("Error: ", error);
+      },
+    });
+
+  const onPositionUpdated = async (
+    formData: { name: string; maxSelections?: string; withAbstain?: boolean },
+    positionId: string,
+  ) => {
+    try {
+      await updatePosition({
+        id: positionId,
+        name: formData.name,
+        maxSelections: formData.maxSelections
+          ? parseInt(formData.maxSelections)
+          : undefined,
+        withAbstain: formData.withAbstain,
+      });
+      toast.toast({
+        title: "Position updated",
+        description: "The position has been updated",
+      });
+    } catch {
+      toast.toast({
+        title: "Error",
+        description: positionError?.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          Edit
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit((data) =>
+              onPositionUpdated(data, position.id),
+            )}
+          >
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Position name</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      defaultValue={position.name}
+                      placeholder="Position name"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    This is the name of the position
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="withAbstain"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormLabel>
+                    Allow voters to abstain from voting on this position
+                  </FormLabel>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="maxSelections"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="Max selections"
+                      type="number"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Allow voter to select {field.value} candidates.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="submit">Update position</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export function DeletePosition({
+  position,
+}: {
+  position: RouterOutputs["elections"]["sessions"][0]["positions"][0];
+}) {
+  const utils = api.useUtils();
+  const toast = useToast();
+
+  const { mutateAsync: deletePosition, error: positionError } =
+    api.elections.deletePosition.useMutation({
+      async onSuccess() {
+        await utils.elections.sessions.invalidate();
+      },
+
+      async onError(error) {
+        console.log("Error: ", error);
+      },
+    });
+
+  const onPositionDeleted = async (positionId: string) => {
+    try {
+      await deletePosition(positionId);
+      toast.toast({
+        title: "Position deleted",
+        description: "The position has been deleted",
+      });
+    } catch {
+      toast.toast({
+        title: "Error",
+        description: positionError?.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" color="red">
+          Delete
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <p>Are you sure you want to delete this position?</p>
+        <DialogFooter>
+          <Button onClick={() => onPositionDeleted(position.id)} color="red">
+            Delete position
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
