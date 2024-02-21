@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BISO Elections Invitation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f4f4;
+      }
+      .container {
+        max-width: 600px;
+        margin: auto;
+        background: white;
+        padding: 20px;
+      }
+      .header {
+        background-color: #004a99;
+        color: white;
+        padding: 10px;
+        text-align: center;
+      }
+      .content {
+        padding: 20px;
+        text-align: center;
+      }
+      .button {
+        display: inline-block;
+        background-color: #008cba;
+        color: white;
+        padding: 10px 20px;
+        text-decoration: none;
+        margin: 20px 0;
+        cursor: pointer;
+      }
+      .footer {
+        background-color: #f4f4f4;
+        text-align: center;
+        padding: 10px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Welcome to BISO Elections</h1>
+      </div>
+      <div class="content">
+        <p>Dear Esteemed Voter,</p>
+        <p>
+          We are excited to invite you to participate in the upcoming elections.
+          Your voice is essential in shaping the future of the BI Student
+          Organisation (BISO).
+        </p>
+        <p>
+          Please use the following one-time code to access the voting platform:
+        </p>
+        <div><strong>{{ .Token }}</strong></div>
+        <p>
+          <a href="https://election.biso.no/" class="button">Vote Now</a>
+        </p>
+        <p>
+          If you have any questions or need assistance, please do not hesitate
+          to contact our support team at
+          <a href="mailto:kk@biso.com">Contact Control Committee</a>.
+        </p>
+        <p>Thank you for your participation!</p>
+        <p>Best Regards,</p>
+        <p>The BISO Elections Team</p>
+      </div>
+      <div class="footer">
+        © BI Student Organisation - All rights reserved.
+      </div>
+    </div>
+  </body>
+</html>
