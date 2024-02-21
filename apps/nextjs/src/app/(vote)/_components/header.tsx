@@ -1,9 +1,8 @@
 import Link from "next/link";
 
+import { ProfileDropdown } from "~/app/_components/profile-dropdown";
+import { getUser } from "~/app/auth/actions";
 import { ModeToggle } from "~/components/theme-toggle";
-import { getUser } from "../auth/actions";
-import { DrawerNav } from "./drawer";
-import { ProfileDropdown } from "./profile-dropdown";
 
 export async function HeaderBar() {
   const { user } = await getUser();
@@ -11,7 +10,10 @@ export async function HeaderBar() {
   return (
     <>
       <header className="top-10 flex h-14 items-center gap-4 px-6">
-        <DrawerNav />
+        <Link className="lg:hidden" href="#">
+          <VoteIcon className="h-6 w-6" />
+          <span className="sr-only">Home</span>
+        </Link>
         <div className="w-full flex-1"></div>
         <ModeToggle />
         <ProfileDropdown user={user} />

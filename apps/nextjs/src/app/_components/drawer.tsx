@@ -1,14 +1,21 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MinusIcon, PlusIcon } from "@radix-ui/react-icons";
 
+import { Button } from "~/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "~/components/ui/card";
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "~/components/ui/drawer";
 import { useElectionId } from "~/lib/hooks/useElectionId";
 import { api } from "~/trpc/react";
 import { TeamSwitcher } from "./TeamSwitcher";
@@ -21,7 +28,7 @@ const bottomNavItems = [
   },
 ];
 
-export function VerticalBar() {
+export function DrawerNav() {
   const pathname = usePathname();
 
   const electionId = useElectionId();
@@ -68,47 +75,30 @@ export function VerticalBar() {
   };
 
   return (
-    <div className="sticky top-0 hidden h-screen lg:block">
-      <Card className="flex h-full flex-col gap-2">
-        <CardHeader className="flex h-[60px] items-center px-6">
+    <Drawer>
+      <DrawerTrigger>
+        <DrawerIcon />
+      </DrawerTrigger>
+      <DrawerContent orientation="Left">
+        <DrawerHeader>
           <TeamSwitcher />
-        </CardHeader>
-        <CardContent className="flex-1 overflow-auto py-2">
-          <nav className="grid items-start gap-2 px-4 text-sm font-medium">
+        </DrawerHeader>
+        <nav>
+          <ul>
             {navItems.map((item) => (
               <Link
-                key={item.name}
+                key={item.href}
                 href={getHref(item.href)}
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-lg transition-all ${activatePath(
-                  item.href,
-                )}`}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-lg transition-all"
               >
                 <item.icon className="h-4 w-4" />
                 {item.name}
               </Link>
             ))}
-          </nav>
-        </CardContent>
-        {isAdmin && (
-          <CardFooter className="sticky bottom-0">
-            <nav className="grid items-start px-4 text-sm font-medium">
-              {bottomNavItems.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all ${activatePath(
-                    item.href,
-                  )}`}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.name}
-                </Link>
-              ))}
-            </nav>
-          </CardFooter>
-        )}
-      </Card>
-    </div>
+          </ul>
+        </nav>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -150,6 +140,25 @@ function UsersIcon(props: React.ComponentProps<"svg">) {
       <circle cx="9" cy="7" r="4" />
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function DrawerIcon(props: React.ComponentProps<"svg">) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 15 15"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M14 12.85L1 12.85L1 14.15L14 14.15L14 12.85ZM14 8.85002L1 8.85002L1 10.15L14 10.15L14 8.85002ZM1 4.85003L14 4.85003L14 6.15003L1 6.15002L1 4.85003ZM14 0.850025L1 0.850025L1 2.15002L14 2.15002L14 0.850025Z"
+        fill="currentColor"
+        fillRule="evenodd"
+        clipRule="evenodd"
+      ></path>
     </svg>
   );
 }
