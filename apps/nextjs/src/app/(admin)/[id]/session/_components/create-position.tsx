@@ -179,25 +179,40 @@ export function EditPosition({
 }) {
   const utils = api.useUtils();
   const toast = useToast();
+
+  // Initialize form with React Hook Form's useForm, using default values from the position prop
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    // Make sure to use position properties directly for defaultValues
     defaultValues: {
       name: position.name ?? "",
       maxSelections: position.maxSelections?.toString() ?? "1",
+      withAbstain: position.withAbstain ?? true,
     },
   });
-  if (!position) {
-    return null;
-  }
+
   const { mutateAsync: updatePosition, error: positionError } =
     api.elections.updatePosition.useMutation({
       async onSuccess() {
-        form.reset();
+        // Reset form with updated position values to ensure form reflects the current state
+        form.reset({
+          name: position.name,
+          maxSelections: position.maxSelections?.toString() ?? "1",
+          withAbstain: position.withAbstain ?? true,
+        });
         await utils.elections.sessions.invalidate();
+        toast.toast({
+          title: "Position updated",
+          description: "The position has been updated successfully.",
+        });
       },
-
       async onError(error) {
-        console.log("Error: ", error);
+        console.error("Error: ", error);
+        toast.toast({
+          title: "Error",
+          description: positionError?.message ?? "Failed to update position.",
+          variant: "destructive",
+        });
       },
     });
 
@@ -205,27 +220,19 @@ export function EditPosition({
     formData: { name: string; maxSelections?: string; withAbstain?: boolean },
     positionId: string,
   ) => {
-    try {
-      await updatePosition({
-        id: positionId,
-        name: formData.name,
-        maxSelections: formData.maxSelections
-          ? parseInt(formData.maxSelections)
-          : undefined,
-        withAbstain: formData.withAbstain,
-      });
-      toast.toast({
-        title: "Position updated",
-        description: "The position has been updated",
-      });
-    } catch {
-      toast.toast({
-        title: "Error",
-        description: positionError?.message,
-        variant: "destructive",
-      });
-    }
+    await updatePosition({
+      id: positionId,
+      name: formData.name,
+      maxSelections: formData.maxSelections
+        ? parseInt(formData.maxSelections)
+        : undefined,
+      withAbstain: formData.withAbstain,
+    });
   };
+
+  if (!position) {
+    return null;
+  }
 
   return (
     <Dialog>
@@ -248,11 +255,7 @@ export function EditPosition({
                 <FormItem>
                   <FormLabel>Position name</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      defaultValue={position.name}
-                      placeholder="Position name"
-                    />
+                    <Input {...field} placeholder="Position name" />
                   </FormControl>
                   <FormDescription>
                     This is the name of the position

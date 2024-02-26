@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { desc, eq, schema } from "@acme/db";
+import { and, desc, eq, ne, schema } from "@acme/db";
 import { inviteVoter } from "@acme/supa";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
@@ -124,11 +124,14 @@ export const electionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      return ctx.db.update(schema.electionPosition).set({
-        name: input.name,
-        maxSelections: input.maxSelections,
-        withAbstain: input.withAbstain,
-      });
+      return ctx.db
+        .update(schema.electionPosition)
+        .set({
+          name: input.name,
+          maxSelections: input.maxSelections,
+          withAbstain: input.withAbstain,
+        })
+        .where(eq(schema.electionPosition.id, input.id));
     }),
   createStatuteChange: adminProcedure
     .input(
@@ -183,6 +186,15 @@ export const electionsRouter = createTRPCRouter({
         .delete(schema.electionStatuteChange)
         .where(eq(schema.electionStatuteChange.id, input.id));
     }),
+  candidates: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionCandidate.findMany({
+      where: eq(schema.electionCandidate.electionPositionId, input),
+      columns: {
+        name: true,
+        id: true,
+      },
+    });
+  }),
   sessions: protectedProcedure
     .input(z.string())
     .query(async ({ ctx, input }) => {
@@ -215,6 +227,7 @@ export const electionsRouter = createTRPCRouter({
               id: true,
               name: true,
               maxSelections: true,
+              withAbstain: true,
             },
             with: {
               candidates: {
@@ -228,6 +241,55 @@ export const electionsRouter = createTRPCRouter({
         },
         where: eq(schema.electionSession.electionId, input),
       });
+    }),
+  toggleSession: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      //This procedure updates the given session. if the progress is currently "not_started", the status should change to in_progress. In these cases, all other in progress sessions must be changed to completed.
+      //If the given session is status "in_progress", they should be changed to "completed".
+      const session = await ctx.db.query.electionSession.findFirst({
+        where: eq(schema.electionSession.id, input.id),
+      });
+
+      if (!session) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Session not found",
+        });
+      }
+
+      if (session.status === "not_started") {
+        //Complete all other sessions, then change the status to in_progress
+        const otherSessions = await ctx.db.query.electionSession.findMany({
+          where: and(
+            ne(schema.electionSession.id, input.id),
+            eq(schema.electionSession.status, "in_progress"),
+          ),
+        });
+
+        for (const session of otherSessions) {
+          await ctx.db
+            .update(schema.electionSession)
+            .set({ status: "completed" })
+            .where(eq(schema.electionSession.id, session.id));
+        }
+
+        return ctx.db
+          .update(schema.electionSession)
+          .set({ status: "in_progress" })
+          .where(eq(schema.electionSession.id, input.id));
+      }
+
+      if (session.status === "in_progress") {
+        return ctx.db
+          .update(schema.electionSession)
+          .set({ status: "completed" })
+          .where(eq(schema.electionSession.id, input.id));
+      }
     }),
   createSession: protectedProcedure
     .input(

@@ -155,12 +155,8 @@ export const votersRouter = createTRPCRouter({
   vote: protectedProcedure
     .input(
       z.object({
-        votes: z.array(
-          z.object({
-            electionCandidateId: z.string().optional(),
-            electionStatuteChangeOptionId: z.string().optional(),
-          }),
-        ),
+        candidateIds: z.array(z.string()),
+        electionStatuteChangeOptionIds: z.array(z.string()),
         sessionId: z.string().min(1),
       }),
     )
@@ -182,30 +178,35 @@ export const votersRouter = createTRPCRouter({
       });
 
       const vote_weight = voter?.vote_weight ?? 1;
-      const votes = [];
 
-      for (const voteOption of input.votes) {
-        for (let i = 0; i < vote_weight; i++) {
-          votes.push(
-            ctx.db
-              .insert(schema.electionVote)
-              .values({
-                candidateId: voteOption.electionCandidateId,
-                statuteChangeOptionId: voteOption.electionStatuteChangeOptionId,
-                profileId: ctx.user.id,
-                sessionId: input.sessionId,
-              })
-              .returning(),
-          );
-        }
-      }
+      //Insert a row for each selected candidate and statute change. Increase based on vote weight
+      await ctx.db
+        .insert(schema.electionVote)
+        .values(
+          input.candidateIds.map((candidateId) => ({
+            profileId: ctx.user.id,
+            sessionId: input.sessionId,
+            candidateId,
+            vote_weight,
+          })),
+        )
+        .returning();
 
-      // Wait for all votes to be inserted
-      const insertedVotes = await Promise.all(votes);
+      await ctx.db
+        .insert(schema.electionVote)
+        .values(
+          input.electionStatuteChangeOptionIds.map((optionId) => ({
+            profileId: ctx.user.id,
+            sessionId: input.sessionId,
+            electionStatuteChangeOptionId: optionId,
+            vote_weight,
+          })),
+        )
+        .returning();
 
-      // Return inserted votes
-      return insertedVotes;
+      return true;
     }),
+
   hasVoted: protectedProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(async ({ ctx, input }) => {

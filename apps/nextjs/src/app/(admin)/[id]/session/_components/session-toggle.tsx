@@ -10,79 +10,53 @@ type Status = "not_started" | "in_progress" | "completed";
 const statuses = ["not_started", "in_progress", "completed"];
 
 interface SessionToggleButton {
-  sessions: RouterOutputs["elections"]["sessions"];
+  sessionId: string;
 }
-export function SessionToggleButton({ sessions }: SessionToggleButton) {
+
+export function SessionToggle({ sessionId }: SessionToggleButton) {
   const toast = useToast();
+  const session = api.elections.session.useQuery(sessionId);
   const utils = api.useUtils();
 
-  const { mutateAsync: updateSession, error: updateSessionError } =
-    api.elections.updateSession.useMutation({
+  const readableStatus = (status: Status) => {
+    return status
+      .split("_") // Split the string by underscore
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()) // Capitalize the first letter of each word
+      .join(" "); // Join the words back with a space
+  };
+
+  const { mutateAsync: toggleSession, error: toggleError } =
+    api.elections.toggleSession.useMutation({
       async onSuccess() {
         toast.toast({
-          title: "Session updated",
-          description: "The session has been updated",
+          title: "Session toggled",
+          description: "The session has been toggled",
         });
-        await utils.elections.sessions.invalidate();
+        await utils.elections.session.invalidate();
       },
 
-      async onError() {
-        toast.toast({
-          title: "Error",
-          description: updateSessionError?.message,
-          variant: "destructive",
-        });
+      async onError(error) {
+        console.log("Error: ", error);
       },
     });
 
-  const onSessionToggle = async (
-    sessionId: string,
-    currentStatusIndex: number,
-  ) => {
-    console.log("Current status: ", statuses[currentStatusIndex]);
-    if (sessions) {
-      // Find any session that is in progress
-      const inProgressSession = sessions.find(
-        (session) => session.status === "in_progress",
-      );
-
-      // If there is a session in progress, update its status to disabled
-      if (inProgressSession) {
-        await updateSession({
-          id: inProgressSession.id,
-          status: "completed" as Status,
-        });
-      }
-
-      // Continue with the rest of the function
-      await updateSession({
+  const onSessionToggled = async (sessionId: string) => {
+    try {
+      await toggleSession({
         id: sessionId,
-        status: statuses[(currentStatusIndex + 1) % statuses.length] as Status,
       });
+    } catch (error) {
+      console.log("Error: ", error);
     }
   };
 
   return (
-    <>
-      <Button
-        onClick={() =>
-          onSessionToggle(session.id, statuses.indexOf(session.status))
-        }
-        disabled={session.status === statuses[2]} // "completed"
-        variant={
-          session.status === statuses[1] // "in_progress"
-            ? "destructive"
-            : session.status === statuses[2] // "completed"
-              ? "ghost"
-              : "default"
-        }
-      >
-        {session.status === statuses[1] // "in_progress"
-          ? "Complete"
-          : session.status === statuses[2] // "completed"
-            ? "Completed"
-            : "Start"}
-      </Button>
-    </>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => onSessionToggled(sessionId)}
+    >
+      {readableStatus(session.data?.status ?? "not_started")}
+    </Button>
   );
 }

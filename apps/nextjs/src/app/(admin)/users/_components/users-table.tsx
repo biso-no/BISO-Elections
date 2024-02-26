@@ -36,6 +36,8 @@ interface UserTableProps {
 export function UsersTable({ users }: UserTableProps) {
   const toast = useToast();
 
+  const { data: currentUser } = api.auth.me.useQuery();
+
   const { mutateAsync: changeRole } = api.admin.changeRole.useMutation({
     onSuccess: () => {
       toast.toast({
@@ -71,7 +73,7 @@ export function UsersTable({ users }: UserTableProps) {
                 <Select
                   defaultValue={user.app_metadata.electionRole}
                   onValueChange={(value) => onRoleChange(user.id, value)}
-                  disabled={user.id === user.id}
+                  disabled={user.id === currentUser?.id}
                 >
                   <SelectTrigger>
                     <SelectValue
