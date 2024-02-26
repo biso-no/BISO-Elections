@@ -69,21 +69,6 @@ export const votersRouter = createTRPCRouter({
       return ctx.db.query.electionSession.findFirst({
         where: eq(schema.electionSession.id, input.id),
         with: {
-          statuteChanges: {
-            columns: {
-              name: true,
-              sessionId: true,
-              id: true,
-            },
-            with: {
-              options: {
-                columns: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
           election: {
             columns: {
               name: true,
@@ -113,21 +98,6 @@ export const votersRouter = createTRPCRouter({
     return ctx.db.query.electionSession.findFirst({
       where: eq(schema.electionSession.status, "in_progress"),
       with: {
-        statuteChanges: {
-          columns: {
-            name: true,
-            sessionId: true,
-            id: true,
-          },
-          with: {
-            options: {
-              columns: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
         election: {
           columns: {
             name: true,

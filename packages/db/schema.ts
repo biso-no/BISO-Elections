@@ -24,10 +24,6 @@ export const campus = pgEnum("campus", [
   "Trondheim",
   "National",
 ]);
-export const electionSessionType = pgEnum("election_session_type", [
-  "statute_change",
-  "position",
-]);
 
 export const electionSessionStatus = pgEnum("election_session_status", [
   "not_started",
@@ -64,6 +60,11 @@ export const eventType = pgEnum("event_type", [
   "public",
   "private",
   "members_only",
+]);
+
+export const positionType = pgEnum("position_type", [
+  "position",
+  "statute_change",
 ]);
 
 export const onlineStatus = pgEnum("online_status", ["online", "offline"]);
@@ -162,7 +163,6 @@ export const electionSessionRelations = relations(
   ({ many, one }) => ({
     // existing relations...
     positions: many(electionPosition),
-    statuteChanges: many(electionStatuteChange),
     votes: many(electionVote),
     election: one(election, {
       fields: [electionSession.electionId],
@@ -176,6 +176,7 @@ export const electionPosition = pgTable("election_position", {
     .primaryKey()
     .default(sql`uuid_generate_v4()`),
   name: varchar("name", { length: 256 }).notNull(),
+  type: positionType("type").notNull(),
   maxSelections: integer("max_selections"),
   withAbstain: boolean("with_abstain"),
   sessionId: varchar("session_id", { length: 256 }).references(
@@ -203,6 +204,7 @@ export const electionCandidate = pgTable("election_candidate", {
     .notNull()
     .references(() => electionPosition.id, { onDelete: "cascade" }),
   name: varchar("name", { length: 256 }).notNull(),
+  priority: integer("priority").notNull(),
 });
 
 export const electionCandidateRelations = relations(
@@ -259,9 +261,6 @@ export const electionVote = pgTable("election_vote", {
     () => electionCandidate.id,
     { onDelete: "cascade" },
   ),
-  statuteChangeOptionId: varchar("statute_change_option_id", {
-    length: 256,
-  }).references(() => electionStatuteChangeOptions.id, { onDelete: "cascade" }),
 });
 
 export const electionVoteRelations = relations(electionVote, ({ one }) => ({
@@ -272,10 +271,6 @@ export const electionVoteRelations = relations(electionVote, ({ one }) => ({
   candidate: one(electionCandidate, {
     fields: [electionVote.candidateId],
     references: [electionCandidate.id],
-  }),
-  statuteChange: one(electionStatuteChangeOptions, {
-    fields: [electionVote.statuteChangeOptionId],
-    references: [electionStatuteChangeOptions.id],
   }),
   session: one(electionSession, {
     fields: [electionVote.sessionId],
@@ -296,56 +291,6 @@ export const electionAdmin = pgTable("election_admin", {
     .references(() => election.id),
   userId: uuid("user_id").references(() => profile.id),
 });
-
-export const electionStatuteChange = pgTable("statute_change", {
-  id: varchar("id", { length: 256 })
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  name: varchar("name", { length: 256 }).notNull(),
-  withAbstain: boolean("with_abstain").notNull(),
-  sessionId: varchar("session_id", { length: 256 })
-    .references(() => electionSession.id, { onDelete: "cascade" })
-    .notNull(),
-});
-
-export const electionStatuteChangeRelations = relations(
-  electionStatuteChange,
-  ({ one, many }) => ({
-    session: one(electionSession, {
-      fields: [electionStatuteChange.sessionId],
-      references: [electionSession.id],
-    }),
-    options: many(electionStatuteChangeOptions),
-  }),
-);
-
-//Enum for statute change. Yes/no/abstain
-export const StatuteChangeOptions = pgEnum("statute_change_options", [
-  "yes",
-  "no",
-  "abstain",
-]);
-
-export const electionStatuteChangeOptions = pgTable("statute_change_option", {
-  id: varchar("id", { length: 256 })
-    .primaryKey()
-    .default(sql`uuid_generate_v4()`),
-  name: StatuteChangeOptions("name").notNull(),
-  changeId: varchar("change_id", { length: 256 })
-    .notNull()
-    .references(() => electionStatuteChange.id, { onDelete: "cascade" }),
-});
-
-export const electionStatuteChangeOptionsRelations = relations(
-  electionStatuteChangeOptions,
-  ({ one, many }) => ({
-    change: one(electionStatuteChange, {
-      fields: [electionStatuteChangeOptions.changeId],
-      references: [electionStatuteChange.id],
-    }),
-    votes: many(electionVote),
-  }),
-);
 
 export const expenseAttachment = pgTable("expense_attachment", {
   id: uuid("id")
