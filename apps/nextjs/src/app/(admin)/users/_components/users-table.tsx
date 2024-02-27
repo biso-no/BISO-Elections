@@ -56,7 +56,6 @@ export function UsersTable({ users }: UserTableProps) {
       <Table className="border-collapse border border-gray-300">
         <TableHeader>
           <TableRow className="text-xs font-medium tracking-wide text-gray-500 dark:text-gray-400">
-            <TableHead className="w-[150px] p-2">Name</TableHead>
             <TableHead className="p-2">Email</TableHead>
             <TableHead className="p-2 text-center">Role</TableHead>
           </TableRow>
@@ -67,7 +66,6 @@ export function UsersTable({ users }: UserTableProps) {
               key={user.id}
               className="hover:bg-gray-100 dark:hover:bg-gray-800"
             >
-              <TableCell className="p-2 font-medium">{user.email}</TableCell>
               <TableCell className="p-2">{user.email}</TableCell>
               <TableCell className="p-2">
                 <Select
@@ -97,6 +95,7 @@ export function UsersTable({ users }: UserTableProps) {
           ))}
         </TableBody>
       </Table>
+      {/*
       <div className="mt-4 flex justify-center">
         <Pagination>
           <PaginationContent>
@@ -123,6 +122,7 @@ export function UsersTable({ users }: UserTableProps) {
           </PaginationContent>
         </Pagination>
       </div>
+      */}
     </>
   );
 }

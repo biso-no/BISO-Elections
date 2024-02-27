@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Pen } from "lucide-react";
+import { Pen, Trash } from "lucide-react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 
@@ -22,10 +22,6 @@ import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
 
-//This is the candidates component. It is used in the PositionTable.
-//It renders a button to add a candidate.
-//When pressed, the button becomes an Input field. If the input contains a value when blurred, a new candidate is created.
-//Candidates are represented with a Badge.
 interface CandidateProps {
   positionId: string;
 }
@@ -46,6 +42,13 @@ export function Candidates({ positionId }: CandidateProps) {
     (candidate) => candidate.name.toLowerCase() !== "abstain",
   );
 
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+    },
+  });
+
   const { mutateAsync: createCandidate } =
     api.elections.createCandidate.useMutation({
       onSuccess: async () => {
@@ -55,6 +58,7 @@ export function Candidates({ positionId }: CandidateProps) {
           description: "The candidate has been created",
         });
         setCandidateInputActive(false); // Hide the input field after a candidate is created
+        form.reset();
       },
       onError: (error) => {
         toast.toast({
@@ -83,13 +87,6 @@ export function Candidates({ positionId }: CandidateProps) {
         });
       },
     });
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-    },
-  });
 
   const onCandidateCreated = async (
     formData: { name: string },
@@ -126,7 +123,7 @@ export function Candidates({ positionId }: CandidateProps) {
   };
 
   return (
-    <div>
+    <div className="flex items-start justify-between">
       {!candidateInputActive && (
         <Button variant="outline" onClick={() => setCandidateInputActive(true)}>
           Add candidate
@@ -163,7 +160,7 @@ export function Candidates({ positionId }: CandidateProps) {
           </form>
         </Form>
       )}
-      <div>
+      <div className="flex flex-wrap justify-end gap-2">
         {filteredCandidates?.map((candidate) => (
           <CandidateBadge candidate={candidate} key={candidate.id} />
         ))}
@@ -200,6 +197,20 @@ export function CandidateBadge({
       onError: (error) => {
         toast.toast({
           title: "Error updating candidate",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+
+  const { mutateAsync: deleteCandidate } =
+    api.elections.deleteCandidate.useMutation({
+      onSuccess: async () => {
+        await utils.elections.candidates.invalidate();
+      },
+      onError: (error) => {
+        toast.toast({
+          title: "Error",
           description: error.message,
           variant: "destructive",
         });
@@ -261,9 +272,23 @@ export function CandidateBadge({
           </form>
         </Form>
       ) : (
-        <Badge onClick={() => setIsEditing(true)}>
+        <Badge>
           <div className="flex items-center gap-2">
-            {candidate.name} <Pen size={14} />
+            {candidate.name}{" "}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditing(true)}
+            >
+              <Pen size={16} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => deleteCandidate(candidate.id)}
+            >
+              <Trash size={16} />
+            </Button>
           </div>
         </Badge>
       )}

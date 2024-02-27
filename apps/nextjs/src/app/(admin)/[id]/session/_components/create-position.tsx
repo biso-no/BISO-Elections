@@ -53,7 +53,7 @@ export function CreatePosition({ sessionId }: { sessionId: string }) {
     api.elections.createPosition.useMutation({
       async onSuccess() {
         form.reset();
-        await utils.elections.sessions.invalidate();
+        await utils.elections.positions.invalidate();
       },
 
       async onError(error) {
@@ -70,7 +70,7 @@ export function CreatePosition({ sessionId }: { sessionId: string }) {
         name: formData.name,
         maxSelections: formData.maxSelections
           ? parseInt(formData.maxSelections)
-          : undefined,
+          : 1,
         sessionId: sessionId,
         withAbstain: formData.withAbstain,
       });
@@ -200,7 +200,7 @@ export function EditPosition({
           maxSelections: position.maxSelections?.toString() ?? "1",
           withAbstain: position.withAbstain ?? true,
         });
-        await utils.elections.sessions.invalidate();
+        await utils.elections.positions.invalidate();
         toast.toast({
           title: "Position updated",
           description: "The position has been updated successfully.",
@@ -237,7 +237,11 @@ export function EditPosition({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-primary text-primary hover:bg-primary/10 dark:hover:bg-primary/20"
+        >
           Edit
         </Button>
       </DialogTrigger>
@@ -322,7 +326,7 @@ export function DeletePosition({
   const { mutateAsync: deletePosition, error: positionError } =
     api.elections.deletePosition.useMutation({
       async onSuccess() {
-        await utils.elections.sessions.invalidate();
+        await utils.elections.positions.invalidate();
       },
 
       async onError(error) {
@@ -349,14 +353,21 @@ export function DeletePosition({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" color="red">
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-destructive text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20"
+        >
           Delete
         </Button>
       </DialogTrigger>
       <DialogContent>
         <p>Are you sure you want to delete this position?</p>
         <DialogFooter>
-          <Button onClick={() => onPositionDeleted(position.id)} color="red">
+          <Button
+            onClick={() => onPositionDeleted(position.id)}
+            variant="destructive"
+          >
             Delete position
           </Button>
         </DialogFooter>

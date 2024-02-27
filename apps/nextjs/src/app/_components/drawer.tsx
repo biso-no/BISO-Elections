@@ -79,7 +79,7 @@ export function DrawerNav() {
       <DrawerTrigger>
         <DrawerIcon />
       </DrawerTrigger>
-      <DrawerContent orientation="Left">
+      <DrawerContent>
         <DrawerHeader>
           <TeamSwitcher />
         </DrawerHeader>

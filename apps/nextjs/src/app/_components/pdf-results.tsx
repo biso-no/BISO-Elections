@@ -104,6 +104,10 @@ function ElectionResultsPDF({ electionResults }: ElectionResults) {
     candidates: { votes: { id: string; electionCandidateId: string }[] }[],
   ) => candidates.reduce((acc, candidate) => acc + candidate.votes.length, 0);
 
+  //Helper function to sum the votes for a candidate based on the votes weight
+  const sumVotes = (votes: { weight: number }[]) =>
+    votes.reduce((acc, vote) => acc + vote.weight, 0);
+
   return (
     <Document>
       {electionResults?.sessions.map((session, index) => (
@@ -130,31 +134,12 @@ function ElectionResultsPDF({ electionResults }: ElectionResults) {
                       {candidate.name}
                     </Text>
                     <Text style={[styles.tableCol, styles.tableCell]}>
-                      {candidate.votes.length}
+                      {sumVotes(candidate.votes)}
                     </Text>
                   </View>
                 ))}
                 <Text style={styles.totalVotes}>
                   Total Votes: {totalVotes(position.candidates)}
-                </Text>
-              </View>
-            ))}
-            {/* Render statute changes here */}
-            {session.statuteChanges?.map((statuteChange, index) => (
-              <View key={index}>
-                <Text style={styles.subtitle}>{statuteChange.name}</Text>
-                {statuteChange.options.map((option, idx) => (
-                  <View key={idx} style={styles.tableRow}>
-                    <Text style={[styles.tableCol, styles.tableCell]}>
-                      {option.name}
-                    </Text>
-                    <Text style={[styles.tableCol, styles.tableCell]}>
-                      {option.votes.length}
-                    </Text>
-                  </View>
-                ))}
-                <Text style={styles.totalVotes}>
-                  Total Votes: {totalVotes(statuteChange.options)}
                 </Text>
               </View>
             ))}

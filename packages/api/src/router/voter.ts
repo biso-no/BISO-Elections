@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { and, eq, schema } from "@acme/db";
+import { and, desc, eq, schema } from "@acme/db";
 
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -94,8 +94,8 @@ export const votersRouter = createTRPCRouter({
       });
     }),
   //There can only be one active session at a time. This query will return the active session for the election. The active session has status in_progress in database.
-  activeSession: protectedProcedure.query(({ ctx }) => {
-    return ctx.db.query.electionSession.findFirst({
+  activeSession: protectedProcedure.query(async ({ ctx }) => {
+    const session = await ctx.db.query.electionSession.findFirst({
       where: eq(schema.electionSession.status, "in_progress"),
       with: {
         election: {
@@ -109,6 +109,7 @@ export const votersRouter = createTRPCRouter({
             id: true,
             name: true,
             maxSelections: true,
+            type: true,
           },
           with: {
             candidates: {
@@ -116,17 +117,20 @@ export const votersRouter = createTRPCRouter({
                 id: true,
                 name: true,
               },
+              orderBy: desc(schema.electionCandidate.priority),
             },
           },
         },
       },
     });
+
+    return session;
   }),
+
   vote: protectedProcedure
     .input(
       z.object({
         candidateIds: z.array(z.string()),
-        electionStatuteChangeOptionIds: z.array(z.string()),
         sessionId: z.string().min(1),
       }),
     )
@@ -149,32 +153,15 @@ export const votersRouter = createTRPCRouter({
 
       const vote_weight = voter?.vote_weight ?? 1;
 
-      //Insert a row for each selected candidate and statute change. Increase based on vote weight
-      await ctx.db
-        .insert(schema.electionVote)
-        .values(
-          input.candidateIds.map((candidateId) => ({
-            profileId: ctx.user.id,
-            sessionId: input.sessionId,
-            candidateId,
-            vote_weight,
-          })),
-        )
-        .returning();
-
-      await ctx.db
-        .insert(schema.electionVote)
-        .values(
-          input.electionStatuteChangeOptionIds.map((optionId) => ({
-            profileId: ctx.user.id,
-            sessionId: input.sessionId,
-            electionStatuteChangeOptionId: optionId,
-            vote_weight,
-          })),
-        )
-        .returning();
-
-      return true;
+      //Insert a row for each selected candidateId
+      for (const candidateId of input.candidateIds) {
+        await ctx.db.insert(schema.electionVote).values({
+          profileId: ctx.user.id,
+          candidateId,
+          sessionId: input.sessionId,
+          weight: vote_weight,
+        });
+      }
     }),
 
   hasVoted: protectedProcedure
