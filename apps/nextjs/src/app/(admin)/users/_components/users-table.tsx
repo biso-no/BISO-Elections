@@ -69,17 +69,17 @@ export function UsersTable({ users }: UserTableProps) {
               <TableCell className="p-2">{user.email}</TableCell>
               <TableCell className="p-2">
                 <Select
-                  defaultValue={user.app_metadata.electionRole}
+                  defaultValue={user.app_metadata.roles[0]}
                   onValueChange={(value) => onRoleChange(user.id, value)}
                   disabled={user.id === currentUser?.id}
                 >
                   <SelectTrigger>
                     <SelectValue
                       placeholder={
-                        user.app_metadata.electionRole || "Select a role"
+                        user.app_metadata.roles[0] || "Select a role"
                       }
                     >
-                      {user.app_metadata.electionRole}
+                      {user.app_metadata.roles[0]}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
