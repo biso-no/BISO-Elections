@@ -29,21 +29,24 @@ import {
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
 
-interface UserTableProps {
-  users: User[];
-}
-
-export function UsersTable({ users }: UserTableProps) {
+export function UsersTable() {
   const toast = useToast();
 
   const { data: currentUser } = api.auth.me.useQuery();
 
+  const { data: users } = api.admin.all.useQuery({
+    page: 1,
+  });
+
+  const utils = api.useUtils();
+
   const { mutateAsync: changeRole } = api.admin.changeRole.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.toast({
         title: "Role updated",
         description: "User role has been updated",
       });
+      await utils.admin.all.invalidate();
     },
   });
 
@@ -61,7 +64,7 @@ export function UsersTable({ users }: UserTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users.map((user) => (
+          {users?.map((user) => (
             <TableRow
               key={user.id}
               className="hover:bg-gray-100 dark:hover:bg-gray-800"
