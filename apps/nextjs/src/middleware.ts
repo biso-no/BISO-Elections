@@ -9,7 +9,8 @@ export async function middleware(req: NextRequest) {
   if (
     req.nextUrl.pathname.startsWith("/_next") ||
     req.nextUrl.pathname.startsWith("/api") ||
-    req.nextUrl.pathname.startsWith("/logos")
+    req.nextUrl.pathname.startsWith("/logos") ||
+    req.nextUrl.pathname.startsWith("/tmpl")
   ) {
     return res;
   }
