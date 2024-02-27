@@ -462,10 +462,10 @@ export const electionsRouter = createTRPCRouter({
         } else {
           const { data, error } = await inviteVoter(voter.email);
 
-          if (error || !data?.user) {
+          if (error ?? !data?.user) {
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message: error?.message || "Failed to invite voter",
+              message: error?.message ?? "Failed to invite voter",
             });
           }
 
@@ -475,7 +475,7 @@ export const electionsRouter = createTRPCRouter({
               id: data.user.id,
               name: voter.name,
               email: voter.email,
-              userRole: "election_participant",
+              userRole: "user",
             })
             .returning();
 
