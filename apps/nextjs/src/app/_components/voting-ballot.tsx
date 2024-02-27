@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 
 import type { RouterOutputs } from "@acme/api";
@@ -7,12 +8,13 @@ import type { RouterOutputs } from "@acme/api";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Checkbox } from "~/components/ui/checkbox";
-import { Form } from "~/components/ui/form";
+import { Label } from "~/components/ui/label";
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
+import { AlreadyVoted } from "../(vote)/vote/_components/already-voted";
 
 interface VotingBallotProps {
-  session?: RouterOutputs["voter"]["sessionById"];
+  session?: RouterOutputs["voter"]["activeSession"];
   preview?: boolean;
 }
 
@@ -25,7 +27,15 @@ export function VotingBallot({
 
   const { data: loadedSession } = api.voter.activeSession.useQuery();
 
+  const { data: hasVoted, isLoading } = api.voter.hasVoted.useQuery({
+    sessionId: propSession?.id ?? loadedSession?.id ?? "",
+  });
+
   const session = propSession ?? loadedSession;
+
+  const [selectedCandidateIds, setSelectedCandidateIds] = React.useState<
+    string[]
+  >([]);
 
   const form = useForm();
 
@@ -37,6 +47,7 @@ export function VotingBallot({
         description: "Vote submitted successfully",
       });
       await utils.voter.activeSession.invalidate();
+      await utils.voter.hasVoted.invalidate();
     },
     async onError() {
       toast.toast({
@@ -47,212 +58,123 @@ export function VotingBallot({
     },
   });
 
-  async function onSubmit(data: Record<string, any>) {
-    if (!loadedSession) return;
-
-    const candidateVotes = loadedSession.positions.flatMap((position) => {
-      // For multiSelect, handle array of selected candidate IDs
-      const selectedCandidates = Array.isArray(data[position.id])
-        ? data[position.id]
-        : [data[position.id]];
-      return selectedCandidates.map((candidateId) => ({
-        electionCandidateId: candidateId,
-        electionStatuteChangeOptionId: undefined,
-      }));
+  async function handleSubmit() {
+    if (!session) return;
+    const voteData = {
+      sessionId: session.id,
+      votes: selectedCandidateIds.map((id) => ({
+        electionCandidateId: id,
+      })),
+    };
+    console.log("voteData: ", voteData);
+    await vote({
+      sessionId: session.id,
+      candidateIds: selectedCandidateIds,
     });
-
-    const statuteChangeVotes = loadedSession.statuteChanges.map(
-      (statuteChange) => ({
-        electionCandidateId: undefined, // Explicitly set undefined for clarity
-        electionStatuteChangeOptionId: data[statuteChange.id],
-      }),
-    );
-
-    const votes = [...candidateVotes, ...statuteChangeVotes]; // Use spread operator to merge arrays
-
-    if (preview) {
-      toast.toast({
-        title: "Preview Mode",
-        description: "Vote submission is disabled in preview mode.",
-      });
-      return;
-    }
-    console.log(data);
-    try {
-      await vote({
-        sessionId: loadedSession.id,
-        votes,
-      });
-    } catch (error) {
-      console.error("Failed to submit vote:", error);
-    }
   }
 
-  if (!session) {
-    return <div>Loading...</div>;
+  if (hasVoted && !preview) {
+    return <AlreadyVoted />;
+  }
+
+  if (isLoading) {
+    return <VotingBallotLoading />;
   }
 
   return (
-    <div className="flex w-full flex-col items-center justify-center gap-4 md:flex-row">
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <div className="flex flex-col gap-4 md:flex-row">
-            {session.positions.map((position) => (
-              <Card key={position.id} className="w-full max-w-lg">
-                <CardContent className="grid gap-4">
-                  <PositionForm
-                    position={position}
-                    form={form}
-                    onSubmit={(candidateId) => {
-                      form.setValue(position.id, candidateId);
+    <div className="flex flex-col gap-6 p-4">
+      {session?.positions?.map((position) => (
+        <Card key={position.id}>
+          <CardHeader className=" p-4">
+            <h3 className="text-lg font-semibold">{position.name}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              You may select {position.maxSelections} candidates
+            </p>
+          </CardHeader>
+          <CardContent>
+            {position.candidates.map((candidate) => (
+              <div
+                key={candidate.id}
+                className="flex items-center justify-between py-2"
+              >
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    key={candidate.id}
+                    value={candidate.id}
+                    checked={selectedCandidateIds.includes(candidate.id)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        // Determine the current number of selections for this position
+                        const currentSelectionsForPosition =
+                          selectedCandidateIds.filter((id) =>
+                            position.candidates.some(
+                              (candidate) => candidate.id === id,
+                            ),
+                          ).length;
+
+                        // Check if adding this candidate would exceed the max selections, if maxSelections is not null
+                        if (
+                          position.maxSelections === null ||
+                          currentSelectionsForPosition < position.maxSelections
+                        ) {
+                          setSelectedCandidateIds((prev) => [
+                            ...prev,
+                            candidate.id,
+                          ]);
+                        } else {
+                          // Optionally, show a toast message or some other form of feedback to inform the user
+                          toast.toast({
+                            title: "Selection Limit Reached",
+                            description: `You can only select up to ${position.maxSelections} candidates for ${position.name}.`,
+                            variant: "destructive",
+                          });
+                        }
+                      } else {
+                        // If unchecking, remove the candidate ID from the selection
+                        setSelectedCandidateIds((prev) =>
+                          prev.filter((id) => id !== candidate.id),
+                        );
+                      }
                     }}
                   />
-                </CardContent>
-              </Card>
+                  <Label>{candidate.name}</Label>
+                </div>
+              </div>
             ))}
-            {session.statuteChanges.map((statuteChange) => (
-              <Card key={statuteChange.id} className="w-full max-w-lg">
-                <CardHeader className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <div className="font-bold">
-                      Vote on {statuteChange.name}
-                    </div>
-                    <div className="text-sm">Choose your preference.</div>
-                  </div>
-                </CardHeader>
-                <CardContent className="grid gap-4">
-                  <StatuteChangeForm
-                    statuteChange={statuteChange}
-                    form={form}
-                    onSubmit={(optionId) => {
-                      form.setValue(statuteChange.id, optionId);
-                    }}
-                  />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="top-4 flex justify-end">
-            <Button type="submit">Submit Votes</Button>
-          </div>
-        </form>
-      </Form>
+          </CardContent>
+        </Card>
+      ))}
+      <Button onClick={handleSubmit}>Submit</Button>
     </div>
   );
 }
 
-function PositionForm({
-  position,
-  onSubmit,
-  form,
-}: PositionFormProps & { maxSelections?: number }) {
-  const maxSelections = position.maxSelections;
+function VotingBallotLoading() {
   return (
-    <div>
-      <CardHeader className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="font-bold">Vote for {position.name}</div>
-          <div className="text-sm">
-            Choose {maxSelections || "one"} candidate
-            {maxSelections === 1 ? "" : "s"}
-          </div>
-        </div>
-      </CardHeader>
-      {position.candidates.map((candidate) => {
-        const isChecked = maxSelections
-          ? form.watch(position.id)?.includes(candidate.id) // Handle array for multiSelect
-          : form.watch(position.id) === candidate.id;
-
-        const handleCheckedChange = () => {
-          if (maxSelections) {
-            if (maxSelections > 1) {
-              const currentValues = form.watch(position.id) || [];
-              if (currentValues.includes(candidate.id)) {
-                // Remove if already selected
-                const newValues = currentValues.filter(
-                  (id) => id !== candidate.id,
-                );
-                onSubmit(newValues);
-              } else {
-                // Add new selection if under maxSelections limit
-                if (
-                  maxSelections === undefined ||
-                  currentValues.length < maxSelections
-                ) {
-                  const newValues = [...currentValues, candidate.id];
-                  onSubmit(newValues);
-                } else {
-                  // Optionally handle the scenario where the limit is reached (e.g., show a message or replace an existing selection)
-                  console.log(
-                    `Maximum of ${maxSelections} selections reached.`,
-                  );
-                  // Example: To replace the first selected item when the limit is reached (uncomment the next line)
-                  // onSubmit([...currentValues.slice(1), candidate.id]);
-                }
-              }
-            }
-          } else {
-            onSubmit(candidate.id);
-          }
-        };
-
-        return (
-          <div key={candidate.id} className="flex items-center space-x-2">
-            <Checkbox
-              name={position.id}
-              value={candidate.id}
-              onCheckedChange={handleCheckedChange}
-              checked={isChecked}
-            />
-            <label htmlFor={candidate.id}>{candidate.name}</label>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function StatuteChangeForm({
-  statuteChange,
-  onSubmit,
-  form,
-}: StatuteChangeFormProps) {
-  return (
-    <div>
-      {statuteChange.options.map((option) => (
-        <div key={option.id} className="flex items-center space-x-2">
-          <Checkbox
-            name={statuteChange.id}
-            value={option.id}
-            onCheckedChange={() => onSubmit(option.id)}
-            checked={form.watch(statuteChange.id) === option.id}
-          />
-          <label htmlFor={option.id}>{option.name}</label>
+    <div className="flex flex-col gap-4">
+      {/* Repeat this block for the number of cards you want to display as loading */}
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="animate-pulse">
+          <Card className="rounded-md bg-gray-300 dark:bg-gray-700">
+            <div className="p-4">
+              <div className="mb-2 h-6 rounded-md bg-gray-400 dark:bg-gray-600"></div>
+              <div className="h-4 w-5/6 rounded-md bg-gray-400 dark:bg-gray-600"></div>
+            </div>
+            <div className="p-4 pt-0">
+              {/* Repeat for the typical number of candidates */}
+              {Array.from({ length: 3 }).map((_, candidateIndex) => (
+                <div
+                  key={candidateIndex}
+                  className="mb-2 flex items-center justify-between"
+                >
+                  <div className="h-4 w-1/4 rounded-md bg-gray-400 dark:bg-gray-600"></div>
+                  <div className="h-4 w-3/4 rounded-md bg-gray-400 dark:bg-gray-600"></div>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
       ))}
     </div>
   );
-}
-
-interface PositionFormProps {
-  position: {
-    id: string;
-    name: string;
-    candidates: { id: string; name: string }[];
-    maxSelections?: number; // Add this prop to the interface
-  };
-  onSubmit: (candidateId: string | string[]) => void; // Adjust type to accept string array for multiSelect
-  form: ReturnType<typeof useForm>;
-  multiSelect?: boolean; // Add this prop to the interface
-  maxSelections?: number; // Add this prop to the interface
-}
-
-interface StatuteChangeFormProps {
-  statuteChange: {
-    id: string;
-    name: string;
-    options: { id: string; name: string }[];
-  };
-  onSubmit: (optionId: string) => void;
-  form: ReturnType<typeof useForm>;
 }

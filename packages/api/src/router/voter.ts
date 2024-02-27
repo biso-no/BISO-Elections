@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { and, eq, schema } from "@acme/db";
+import { and, desc, eq, schema } from "@acme/db";
 
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -69,21 +69,6 @@ export const votersRouter = createTRPCRouter({
       return ctx.db.query.electionSession.findFirst({
         where: eq(schema.electionSession.id, input.id),
         with: {
-          statuteChanges: {
-            columns: {
-              name: true,
-              sessionId: true,
-              id: true,
-            },
-            with: {
-              options: {
-                columns: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
           election: {
             columns: {
               name: true,
@@ -109,25 +94,10 @@ export const votersRouter = createTRPCRouter({
       });
     }),
   //There can only be one active session at a time. This query will return the active session for the election. The active session has status in_progress in database.
-  activeSession: protectedProcedure.query(({ ctx }) => {
-    return ctx.db.query.electionSession.findFirst({
+  activeSession: protectedProcedure.query(async ({ ctx }) => {
+    const session = await ctx.db.query.electionSession.findFirst({
       where: eq(schema.electionSession.status, "in_progress"),
       with: {
-        statuteChanges: {
-          columns: {
-            name: true,
-            sessionId: true,
-            id: true,
-          },
-          with: {
-            options: {
-              columns: {
-                id: true,
-                name: true,
-              },
-            },
-          },
-        },
         election: {
           columns: {
             name: true,
@@ -139,6 +109,7 @@ export const votersRouter = createTRPCRouter({
             id: true,
             name: true,
             maxSelections: true,
+            type: true,
           },
           with: {
             candidates: {
@@ -146,21 +117,20 @@ export const votersRouter = createTRPCRouter({
                 id: true,
                 name: true,
               },
+              orderBy: desc(schema.electionCandidate.priority),
             },
           },
         },
       },
     });
+
+    return session;
   }),
+
   vote: protectedProcedure
     .input(
       z.object({
-        votes: z.array(
-          z.object({
-            electionCandidateId: z.string().optional(),
-            electionStatuteChangeOptionId: z.string().optional(),
-          }),
-        ),
+        candidateIds: z.array(z.string()),
         sessionId: z.string().min(1),
       }),
     )
@@ -182,30 +152,18 @@ export const votersRouter = createTRPCRouter({
       });
 
       const vote_weight = voter?.vote_weight ?? 1;
-      const votes = [];
 
-      for (const voteOption of input.votes) {
-        for (let i = 0; i < vote_weight; i++) {
-          votes.push(
-            ctx.db
-              .insert(schema.electionVote)
-              .values({
-                candidateId: voteOption.electionCandidateId,
-                statuteChangeOptionId: voteOption.electionStatuteChangeOptionId,
-                profileId: ctx.user.id,
-                sessionId: input.sessionId,
-              })
-              .returning(),
-          );
-        }
+      //Insert a row for each selected candidateId
+      for (const candidateId of input.candidateIds) {
+        await ctx.db.insert(schema.electionVote).values({
+          profileId: ctx.user.id,
+          candidateId,
+          sessionId: input.sessionId,
+          weight: vote_weight,
+        });
       }
-
-      // Wait for all votes to be inserted
-      const insertedVotes = await Promise.all(votes);
-
-      // Return inserted votes
-      return insertedVotes;
     }),
+
   hasVoted: protectedProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(async ({ ctx, input }) => {

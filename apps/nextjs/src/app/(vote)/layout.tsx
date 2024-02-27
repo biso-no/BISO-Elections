@@ -1,4 +1,4 @@
-import { SocketProvider } from "~/components/socket-provider";
+import { HeaderBar } from "./_components/header";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -6,6 +6,9 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   return (
-    <SocketProvider url="http://localhost:3001">{children}</SocketProvider>
+    <div className="flex min-h-screen flex-col">
+      <HeaderBar />
+      <main className="flex-1">{children}</main>
+    </div>
   );
 }

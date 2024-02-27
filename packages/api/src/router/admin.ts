@@ -33,12 +33,7 @@ export const adminRouter = createTRPCRouter({
         });
       }
       console.log("Logged users: ", data.users);
-      const users = data.users.filter((user: User) => {
-        return (
-          user.app_metadata?.roles?.includes("admin") ||
-          user.app_metadata?.roles?.includes("election_manager")
-        );
-      });
-      return users;
+
+      return data.users;
     }),
 });

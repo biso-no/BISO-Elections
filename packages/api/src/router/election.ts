@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { desc, eq, schema } from "@acme/db";
+import { and, desc, eq, ne, schema } from "@acme/db";
 import { inviteVoter } from "@acme/supa";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
@@ -14,7 +14,7 @@ export const electionsRouter = createTRPCRouter({
       limit: 10,
     });
   }),
-  mine: protectedProcedure.query(({ ctx }) => {
+  mine: adminProcedure.query(({ ctx }) => {
     return ctx.db.query.election.findMany({
       where: eq(schema.election.createdBy, ctx.user.id),
     });
@@ -81,7 +81,7 @@ export const electionsRouter = createTRPCRouter({
   delete: adminProcedure.input(z.string()).mutation(async ({ ctx, input }) => {
     return ctx.db.delete(schema.election).where(eq(schema.election.id, input));
   }),
-  createPosition: protectedProcedure
+  createPosition: adminProcedure
     .input(
       z.object({
         sessionId: z.string().min(1),
@@ -99,6 +99,7 @@ export const electionsRouter = createTRPCRouter({
           sessionId: input.sessionId,
           maxSelections: input.maxSelections,
           withAbstain: input.withAbstain,
+          type: "position",
         })
         .returning();
 
@@ -112,7 +113,27 @@ export const electionsRouter = createTRPCRouter({
       await ctx.db.insert(schema.electionCandidate).values({
         name: "Abstain",
         electionPositionId: position.id,
+        priority: 1,
       });
+    }),
+  updatePosition: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        name: z.string().min(1),
+        maxSelections: z.number().optional(),
+        withAbstain: z.boolean().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db
+        .update(schema.electionPosition)
+        .set({
+          name: input.name,
+          maxSelections: input.maxSelections,
+          withAbstain: input.withAbstain,
+        })
+        .where(eq(schema.electionPosition.id, input.id));
     }),
   createStatuteChange: adminProcedure
     .input(
@@ -125,11 +146,12 @@ export const electionsRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       // Check if the user is an admin of the election
       const [statuteChange] = await ctx.db
-        .insert(schema.electionStatuteChange)
+        .insert(schema.electionPosition)
         .values({
           name: input.content,
           withAbstain: input.withAbstain,
           sessionId: input.sessionId,
+          type: "statute_change",
         })
         .returning();
 
@@ -140,80 +162,132 @@ export const electionsRouter = createTRPCRouter({
         });
       }
 
-      await ctx.db.insert(schema.electionStatuteChangeOptions).values([
-        { name: "yes", changeId: statuteChange.id },
-        { name: "no", changeId: statuteChange.id },
+      await ctx.db.insert(schema.electionCandidate).values([
+        {
+          name: "Abstain",
+          electionPositionId: statuteChange.id,
+          priority: 1,
+        },
+        {
+          name: "Yes",
+          electionPositionId: statuteChange.id,
+          priority: 10,
+        },
+        {
+          name: "No",
+          electionPositionId: statuteChange.id,
+          priority: 9,
+        },
       ]);
-
-      // If withAbstain is true, create 'abstain' option
-      if (input.withAbstain) {
-        await ctx.db.insert(schema.electionStatuteChangeOptions).values({
-          name: "abstain",
-          changeId: statuteChange.id,
-        });
-      }
-
-      return statuteChange;
     }),
-  deleteStatuteChange: adminProcedure
+  candidates: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionCandidate.findMany({
+      where: eq(schema.electionCandidate.electionPositionId, input),
+      columns: {
+        name: true,
+        id: true,
+      },
+    });
+  }),
+  sessions: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionSession.findMany({
+      with: {
+        election: {
+          columns: {
+            name: true,
+            id: true,
+          },
+        },
+        positions: {
+          columns: {
+            id: true,
+            name: true,
+            maxSelections: true,
+            withAbstain: true,
+            type: true,
+          },
+          with: {
+            candidates: {
+              columns: {
+                id: true,
+                name: true,
+              },
+              orderBy: desc(schema.electionCandidate.priority),
+            },
+          },
+        },
+      },
+      where: eq(schema.electionSession.electionId, input),
+    });
+  }),
+  statuteChanges: adminProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      return ctx.db.query.electionPosition.findMany({
+        where: and(
+          eq(schema.electionPosition.sessionId, input),
+          eq(schema.electionPosition.type, "statute_change"),
+        ),
+        with: {
+          candidates: {
+            columns: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+    }),
+  toggleSession: adminProcedure
     .input(
       z.object({
         id: z.string(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      //Deletes the statute change
-      return ctx.db
-        .delete(schema.electionStatuteChange)
-        .where(eq(schema.electionStatuteChange.id, input.id));
-    }),
-  sessions: protectedProcedure
-    .input(z.string())
-    .query(async ({ ctx, input }) => {
-      return ctx.db.query.electionSession.findMany({
-        with: {
-          statuteChanges: {
-            columns: {
-              name: true,
-              sessionId: true,
-              id: true,
-              withAbstain: true,
-            },
-            with: {
-              options: {
-                columns: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-          election: {
-            columns: {
-              name: true,
-              id: true,
-            },
-          },
-          positions: {
-            columns: {
-              id: true,
-              name: true,
-              maxSelections: true,
-            },
-            with: {
-              candidates: {
-                columns: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-        where: eq(schema.electionSession.electionId, input),
+      //This procedure updates the given session. if the progress is currently "not_started", the status should change to in_progress. In these cases, all other in progress sessions must be changed to completed.
+      //If the given session is status "in_progress", they should be changed to "completed".
+      const session = await ctx.db.query.electionSession.findFirst({
+        where: eq(schema.electionSession.id, input.id),
       });
+
+      if (!session) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Session not found",
+        });
+      }
+
+      if (session.status === "not_started") {
+        //Complete all other sessions, then change the status to in_progress
+        const otherSessions = await ctx.db.query.electionSession.findMany({
+          where: and(
+            ne(schema.electionSession.id, input.id),
+            eq(schema.electionSession.status, "in_progress"),
+          ),
+        });
+
+        for (const session of otherSessions) {
+          await ctx.db
+            .update(schema.electionSession)
+            .set({ status: "completed" })
+            .where(eq(schema.electionSession.id, session.id));
+        }
+
+        return ctx.db
+          .update(schema.electionSession)
+          .set({ status: "in_progress" })
+          .where(eq(schema.electionSession.id, input.id));
+      }
+
+      if (session.status === "in_progress") {
+        return ctx.db
+          .update(schema.electionSession)
+          .set({ status: "completed" })
+          .where(eq(schema.electionSession.id, input.id));
+      }
     }),
-  createSession: protectedProcedure
+  createSession: adminProcedure
     .input(
       z.object({
         electionId: z.string(),
@@ -252,7 +326,10 @@ export const electionsRouter = createTRPCRouter({
     }),
   positions: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionPosition.findMany({
-      where: eq(schema.electionPosition.sessionId, input),
+      where: and(
+        eq(schema.electionPosition.sessionId, input),
+        eq(schema.electionPosition.type, "position"),
+      ),
       with: {
         candidates: {
           with: {
@@ -260,7 +337,6 @@ export const electionsRouter = createTRPCRouter({
               columns: {
                 id: true,
                 candidateId: true,
-                statuteChangeOptionId: true,
               },
             },
           },
@@ -280,16 +356,16 @@ export const electionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check if the user is an admin of the election
       return ctx.db
         .insert(schema.electionCandidate)
         .values({
           electionPositionId: input.electionPositionId,
           name: input.name,
+          priority: 10,
         })
         .returning();
     }),
-  updateCandidate: protectedProcedure
+  updateCandidate: adminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -306,7 +382,7 @@ export const electionsRouter = createTRPCRouter({
         })
         .where(eq(schema.electionCandidate.id, input.id));
     }),
-  voters: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
+  voters: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionVoter.findMany({
       where: eq(schema.electionVoter.electionId, input),
       columns: {
@@ -326,7 +402,7 @@ export const electionsRouter = createTRPCRouter({
       },
     });
   }),
-  createVoter: protectedProcedure
+  createVoter: adminProcedure
     .input(
       z.object({
         electionId: z.string(),
@@ -360,7 +436,7 @@ export const electionsRouter = createTRPCRouter({
         })
         .returning();
     }),
-  createMultipleVoters: protectedProcedure
+  createMultipleVoters: adminProcedure
     .input(
       z.object({
         electionId: z.string(),
@@ -439,7 +515,6 @@ export const electionsRouter = createTRPCRouter({
             },
           },
         },
-        statuteChanges: true,
       },
     });
   }),
@@ -466,12 +541,12 @@ export const electionsRouter = createTRPCRouter({
         },
       });
     }),
-  admins: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
+  admins: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionAdmin.findMany({
       where: eq(schema.electionAdmin.electionId, input),
     });
   }),
-  createAdmin: protectedProcedure
+  createAdmin: adminProcedure
     .input(
       z.object({
         electionId: z.string(),
@@ -488,7 +563,7 @@ export const electionsRouter = createTRPCRouter({
         })
         .returning();
     }),
-  deleteSession: protectedProcedure
+  deleteSession: adminProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
       // Check if the user is an admin of the election
@@ -496,13 +571,21 @@ export const electionsRouter = createTRPCRouter({
         .delete(schema.electionSession)
         .where(eq(schema.electionSession.id, input));
     }),
-  deleteCandidate: protectedProcedure
+  deleteCandidate: adminProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
       // Check if the user is an admin of the election
       return ctx.db
         .delete(schema.electionCandidate)
         .where(eq(schema.electionCandidate.id, input));
+    }),
+  deletePosition: adminProcedure
+    .input(z.string())
+    .mutation(async ({ ctx, input }) => {
+      // Check if the user is an admin of the election
+      return ctx.db
+        .delete(schema.electionPosition)
+        .where(eq(schema.electionPosition.id, input));
     }),
   //A procedure to get all voters who have not yet voted for a given session.
   votersWhoHaveNotVoted: protectedProcedure
@@ -537,11 +620,6 @@ export const electionsRouter = createTRPCRouter({
         date: true,
       },
       with: {
-        voters: {
-          columns: {
-            vote_weight: true,
-          },
-        },
         sessions: {
           columns: {
             name: true,
@@ -561,27 +639,7 @@ export const electionsRouter = createTRPCRouter({
                       columns: {
                         id: true,
                         candidateId: true,
-                        statuteChangeOptionId: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-            statuteChanges: {
-              columns: {
-                name: true,
-              },
-              with: {
-                options: {
-                  columns: {
-                    name: true,
-                  },
-                  with: {
-                    votes: {
-                      columns: {
-                        id: true,
-                        statuteChangeOptionId: true,
+                        weight: true,
                       },
                     },
                   },
@@ -615,21 +673,6 @@ export const electionsRouter = createTRPCRouter({
                     columns: {
                       id: true,
                       candidateId: true,
-                      statuteChangeOptionId: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-          statuteChanges: {
-            with: {
-              options: {
-                with: {
-                  votes: {
-                    columns: {
-                      id: true,
-                      statuteChangeOptionId: true,
                     },
                   },
                 },
