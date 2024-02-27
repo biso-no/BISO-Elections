@@ -21,7 +21,7 @@ export async function middleware(req: NextRequest) {
   if (data.session?.user.app_metadata?.roles.includes("admin")) {
     return NextResponse.next();
   } else if (
-    data.session?.user.app_metadata?.roles.includes("election_participant") &&
+    data.session?.user.app_metadata?.roles.includes("user") &&
     !req.nextUrl.pathname.startsWith("/vote")
   ) {
     return NextResponse.redirect(process.env.NEXT_PUBLIC_URL + "/vote");
