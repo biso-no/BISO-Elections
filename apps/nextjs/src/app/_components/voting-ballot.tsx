@@ -88,7 +88,8 @@ export function VotingBallot({
           <CardHeader className=" p-4">
             <h3 className="text-lg font-semibold">{position.name}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              You may select {position.maxSelections} candidates
+              You may select {position.maxSelections}{" "}
+              {position.type === "position" ? "candidates" : "option"}
             </p>
           </CardHeader>
           <CardContent>

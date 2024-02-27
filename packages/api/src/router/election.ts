@@ -152,6 +152,7 @@ export const electionsRouter = createTRPCRouter({
           withAbstain: input.withAbstain,
           sessionId: input.sessionId,
           type: "statute_change",
+          maxSelections: 1,
         })
         .returning();
 
