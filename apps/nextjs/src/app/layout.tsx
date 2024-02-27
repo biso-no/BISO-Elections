@@ -20,6 +20,20 @@ const fontSans = Inter({
 export const metadata: Metadata = {
   title: "BISO Elections",
   description: "BISO Hosted Elections platform covering all campuses",
+  icons: {
+    icon: [
+      {
+        media: "(prefers-color-scheme: light)",
+        url: "/logos/logo-light.svg",
+        href: "/logos/logo-light.svg",
+      },
+      {
+        media: "(prefers-color-scheme: dark)",
+        url: "/logos/logo-dark.svg",
+        href: "/logos/logo-dark.svg",
+      },
+    ],
+  },
   openGraph: {
     title: "BISO Elections",
     description: "BISO Hosted Elections platform covering all campuses",
