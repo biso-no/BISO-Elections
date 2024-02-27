@@ -29,24 +29,21 @@ import {
 import { useToast } from "~/components/ui/use-toast";
 import { api } from "~/trpc/react";
 
-export function UsersTable() {
+interface UserTableProps {
+  users: User[];
+}
+
+export function UsersTable({ users }: UserTableProps) {
   const toast = useToast();
 
   const { data: currentUser } = api.auth.me.useQuery();
 
-  const { data: users } = api.admin.all.useQuery({
-    page: 1,
-  });
-
-  const utils = api.useUtils();
-
   const { mutateAsync: changeRole } = api.admin.changeRole.useMutation({
-    onSuccess: async () => {
+    onSuccess: () => {
       toast.toast({
         title: "Role updated",
         description: "User role has been updated",
       });
-      await utils.admin.all.invalidate();
     },
   });
 
@@ -64,7 +61,7 @@ export function UsersTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users?.map((user) => (
+          {users.map((user) => (
             <TableRow
               key={user.id}
               className="hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -72,17 +69,17 @@ export function UsersTable() {
               <TableCell className="p-2">{user.email}</TableCell>
               <TableCell className="p-2">
                 <Select
-                  defaultValue={user.app_metadata.roles[0]}
+                  defaultValue={user.app_metadata.electionRole}
                   onValueChange={(value) => onRoleChange(user.id, value)}
                   disabled={user.id === currentUser?.id}
                 >
                   <SelectTrigger>
                     <SelectValue
                       placeholder={
-                        user.app_metadata.roles[0] || "Select a role"
+                        user.app_metadata.electionRole || "Select a role"
                       }
                     >
-                      {user.app_metadata.roles[0]}
+                      {user.app_metadata.electionRole}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
