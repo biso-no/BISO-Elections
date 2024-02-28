@@ -3,77 +3,71 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BISO Elections Invitation</title>
+    <title>Welcome to BISO Election</title>
     <style>
       body {
         font-family: Arial, sans-serif;
         margin: 0;
         padding: 0;
-        background-color: #f4f4f4;
+        background-color: #f0f0f0;
+        color: #333;
       }
       .container {
         max-width: 600px;
-        margin: auto;
-        background: white;
+        margin: 50px auto;
+        background: #fff;
         padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       }
-      .header {
-        background-color: #004a99;
-        color: white;
-        padding: 10px;
+      h1 {
+        color: #007bff;
         text-align: center;
       }
-      .content {
-        padding: 20px;
-        text-align: center;
+      p {
+        font-size: 16px;
+        line-height: 1.6;
       }
-      .button {
+      a {
         display: inline-block;
-        background-color: #008cba;
-        color: white;
+        background-color: #007bff;
+        color: #ffffff;
         padding: 10px 20px;
-        text-decoration: none;
         margin: 20px 0;
-        cursor: pointer;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: bold;
+        text-align: center;
       }
       .footer {
-        background-color: #f4f4f4;
         text-align: center;
-        padding: 10px;
-        font-size: 12px;
+        margin-top: 20px;
+        font-size: 14px;
+        color: #666;
+      }
+      .button-container {
+        text-align: center;
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <div class="header">
-        <h1>Welcome to BISO Elections</h1>
+      <h1>Welcome to the BISO Election!</h1>
+      <p>
+        We're excited to have you participate in the upcoming election. This is
+        a great opportunity to have your say in the future direction of our
+        student organization.
+      </p>
+      <p>To cast your vote, please log in at the start of the election:</p>
+      <div class="button-container">
+        <a href="https://election.biso.no" target="_blank">Log In to Vote</a>
       </div>
-      <div class="content">
-        <p>Dear Esteemed Voter,</p>
-        <p>
-          We are excited to invite you to participate in the upcoming elections.
-          Your voice is essential in shaping the future of the BI Student
-          Organisation (BISO).
-        </p>
-        <p>
-          Please use the following one-time code to access the voting platform:
-        </p>
-        <div><strong>{{ .Token }}</strong></div>
-        <p>
-          <a href="https://election.biso.no/" class="button">Vote Now</a>
-        </p>
-        <p>
-          If you have any questions or need assistance, please do not hesitate
-          to contact our support team at
-          <a href="mailto:kk@biso.com">Contact Control Committee</a>.
-        </p>
-        <p>Thank you for your participation!</p>
-        <p>Best Regards,</p>
-        <p>The BISO Elections Team</p>
-      </div>
+      <p>
+        Make sure your voice is heard and contribute to shaping the future of
+        BISO!
+      </p>
       <div class="footer">
-        © BI Student Organisation - All rights reserved.
+        For any questions or assistance, please contact kk@biso.no.
       </div>
     </div>
   </body>

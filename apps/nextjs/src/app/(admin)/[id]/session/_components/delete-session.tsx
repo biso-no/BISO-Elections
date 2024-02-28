@@ -1,5 +1,7 @@
 "use client";
 
+import { Trash } from "lucide-react";
+
 import { Button } from "~/components/ui/button";
 import {
   Dialog,
@@ -52,7 +54,9 @@ export function DeleteSession({ sessionId }: DeleteSession) {
   return (
     <Dialog>
       <DialogTrigger>
-        <Button variant="destructive">Delete</Button>
+        <Button variant="ghost">
+          <Trash className="text-red-600" />
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

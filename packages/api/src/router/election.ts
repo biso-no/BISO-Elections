@@ -14,7 +14,7 @@ export const electionsRouter = createTRPCRouter({
       limit: 10,
     });
   }),
-  mine: protectedProcedure.query(({ ctx }) => {
+  mine: adminProcedure.query(({ ctx }) => {
     return ctx.db.query.election.findMany({
       where: eq(schema.election.createdBy, ctx.user.id),
     });
@@ -81,7 +81,7 @@ export const electionsRouter = createTRPCRouter({
   delete: adminProcedure.input(z.string()).mutation(async ({ ctx, input }) => {
     return ctx.db.delete(schema.election).where(eq(schema.election.id, input));
   }),
-  createPosition: protectedProcedure
+  createPosition: adminProcedure
     .input(
       z.object({
         sessionId: z.string().min(1),
@@ -113,7 +113,7 @@ export const electionsRouter = createTRPCRouter({
       await ctx.db.insert(schema.electionCandidate).values({
         name: "Abstain",
         electionPositionId: position.id,
-        priority: 0,
+        priority: 1,
       });
     }),
   updatePosition: adminProcedure
@@ -152,6 +152,7 @@ export const electionsRouter = createTRPCRouter({
           withAbstain: input.withAbstain,
           sessionId: input.sessionId,
           type: "statute_change",
+          maxSelections: 1,
         })
         .returning();
 
@@ -166,17 +167,17 @@ export const electionsRouter = createTRPCRouter({
         {
           name: "Abstain",
           electionPositionId: statuteChange.id,
-          priority: 0,
+          priority: 1,
         },
         {
           name: "Yes",
           electionPositionId: statuteChange.id,
-          priority: 1,
+          priority: 10,
         },
         {
           name: "No",
           electionPositionId: statuteChange.id,
-          priority: 2,
+          priority: 9,
         },
       ]);
     }),
@@ -189,35 +190,53 @@ export const electionsRouter = createTRPCRouter({
       },
     });
   }),
-  sessions: protectedProcedure
-    .input(z.string())
-    .query(async ({ ctx, input }) => {
-      return ctx.db.query.electionSession.findMany({
-        with: {
-          election: {
-            columns: {
-              name: true,
-              id: true,
-            },
+  sessions: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
+    return ctx.db.query.electionSession.findMany({
+      with: {
+        election: {
+          columns: {
+            name: true,
+            id: true,
           },
-          positions: {
-            columns: {
-              id: true,
-              name: true,
-              maxSelections: true,
-              withAbstain: true,
-            },
-            with: {
-              candidates: {
-                columns: {
-                  id: true,
-                  name: true,
-                },
+        },
+        positions: {
+          columns: {
+            id: true,
+            name: true,
+            maxSelections: true,
+            withAbstain: true,
+            type: true,
+          },
+          with: {
+            candidates: {
+              columns: {
+                id: true,
+                name: true,
               },
+              orderBy: desc(schema.electionCandidate.priority),
             },
           },
         },
-        where: eq(schema.electionSession.electionId, input),
+      },
+      where: eq(schema.electionSession.electionId, input),
+    });
+  }),
+  statuteChanges: adminProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      return ctx.db.query.electionPosition.findMany({
+        where: and(
+          eq(schema.electionPosition.sessionId, input),
+          eq(schema.electionPosition.type, "statute_change"),
+        ),
+        with: {
+          candidates: {
+            columns: {
+              id: true,
+              name: true,
+            },
+          },
+        },
       });
     }),
   toggleSession: adminProcedure
@@ -269,7 +288,7 @@ export const electionsRouter = createTRPCRouter({
           .where(eq(schema.electionSession.id, input.id));
       }
     }),
-  createSession: protectedProcedure
+  createSession: adminProcedure
     .input(
       z.object({
         electionId: z.string(),
@@ -308,7 +327,10 @@ export const electionsRouter = createTRPCRouter({
     }),
   positions: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionPosition.findMany({
-      where: eq(schema.electionPosition.sessionId, input),
+      where: and(
+        eq(schema.electionPosition.sessionId, input),
+        eq(schema.electionPosition.type, "position"),
+      ),
       with: {
         candidates: {
           with: {
@@ -335,17 +357,16 @@ export const electionsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check if the user is an admin of the election
       return ctx.db
         .insert(schema.electionCandidate)
         .values({
           electionPositionId: input.electionPositionId,
           name: input.name,
-          priority: 0,
+          priority: 10,
         })
         .returning();
     }),
-  updateCandidate: protectedProcedure
+  updateCandidate: adminProcedure
     .input(
       z.object({
         id: z.string(),
@@ -362,7 +383,7 @@ export const electionsRouter = createTRPCRouter({
         })
         .where(eq(schema.electionCandidate.id, input.id));
     }),
-  voters: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
+  voters: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionVoter.findMany({
       where: eq(schema.electionVoter.electionId, input),
       columns: {
@@ -382,7 +403,7 @@ export const electionsRouter = createTRPCRouter({
       },
     });
   }),
-  createVoter: protectedProcedure
+  createVoter: adminProcedure
     .input(
       z.object({
         electionId: z.string(),
@@ -416,7 +437,7 @@ export const electionsRouter = createTRPCRouter({
         })
         .returning();
     }),
-  createMultipleVoters: protectedProcedure
+  createMultipleVoters: adminProcedure
     .input(
       z.object({
         electionId: z.string(),
@@ -442,10 +463,10 @@ export const electionsRouter = createTRPCRouter({
         } else {
           const { data, error } = await inviteVoter(voter.email);
 
-          if (error || !data?.user) {
+          if (error ?? !data?.user) {
             throw new TRPCError({
               code: "INTERNAL_SERVER_ERROR",
-              message: error?.message || "Failed to invite voter",
+              message: error?.message ?? "Failed to invite voter",
             });
           }
 
@@ -455,7 +476,7 @@ export const electionsRouter = createTRPCRouter({
               id: data.user.id,
               name: voter.name,
               email: voter.email,
-              userRole: "election_participant",
+              userRole: "user",
             })
             .returning();
 
@@ -521,12 +542,12 @@ export const electionsRouter = createTRPCRouter({
         },
       });
     }),
-  admins: protectedProcedure.input(z.string()).query(async ({ ctx, input }) => {
+  admins: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
     return ctx.db.query.electionAdmin.findMany({
       where: eq(schema.electionAdmin.electionId, input),
     });
   }),
-  createAdmin: protectedProcedure
+  createAdmin: adminProcedure
     .input(
       z.object({
         electionId: z.string(),
@@ -543,7 +564,7 @@ export const electionsRouter = createTRPCRouter({
         })
         .returning();
     }),
-  deleteSession: protectedProcedure
+  deleteSession: adminProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
       // Check if the user is an admin of the election
@@ -551,7 +572,7 @@ export const electionsRouter = createTRPCRouter({
         .delete(schema.electionSession)
         .where(eq(schema.electionSession.id, input));
     }),
-  deleteCandidate: protectedProcedure
+  deleteCandidate: adminProcedure
     .input(z.string())
     .mutation(async ({ ctx, input }) => {
       // Check if the user is an admin of the election
@@ -600,11 +621,6 @@ export const electionsRouter = createTRPCRouter({
         date: true,
       },
       with: {
-        voters: {
-          columns: {
-            vote_weight: true,
-          },
-        },
         sessions: {
           columns: {
             name: true,
@@ -624,6 +640,7 @@ export const electionsRouter = createTRPCRouter({
                       columns: {
                         id: true,
                         candidateId: true,
+                        weight: true,
                       },
                     },
                   },

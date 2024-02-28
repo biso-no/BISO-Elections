@@ -38,13 +38,13 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
 
   const [isOpen, setIsOpen] = useState(false);
   const [voters, setVoters] = useState<VoterInvitation[]>([
-    { name: "", email: "", electionId: "", vote_weight: 0 },
+    { name: "", email: "", electionId: "", vote_weight: 1 },
   ]);
 
   const addRow = () => {
     setVoters((prevVoters) => [
       ...prevVoters,
-      { name: "", email: "", electionId: "", vote_weight: 0 },
+      { name: "", email: "", electionId: "", vote_weight: 1 },
     ]);
   };
 

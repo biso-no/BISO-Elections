@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import type { RouterOutputs } from "@acme/api";
 
+import { Button } from "~/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "~/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -51,20 +53,27 @@ export function NotYetVoted({ sessionId }: NotYetVotedProps) {
   */
 
   return (
-    <Table>
-      <TableCaption>Not Yet Voted</TableCaption>
-      <TableHead>
-        <TableRow>
-          <TableHeader>Voter Name</TableHeader>
-        </TableRow>
-      </TableHead>
-      <TableBody>
-        {votersNotVoted?.map((voter) => (
-          <TableRow key={voter.id}>
-            <TableCell>{voter.profile.name}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <Dialog>
+      <DialogTrigger>
+        <Button variant="outline">Missing votes</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <Table>
+          <TableCaption>Not Yet Voted</TableCaption>
+          <TableHead>
+            <TableRow>
+              <TableHeader>Voter Name</TableHeader>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {votersNotVoted?.map((voter) => (
+              <TableRow key={voter.id}>
+                <TableCell>{voter.profile.name}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </DialogContent>
+    </Dialog>
   );
 }

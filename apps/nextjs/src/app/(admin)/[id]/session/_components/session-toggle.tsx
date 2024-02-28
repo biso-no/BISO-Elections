@@ -33,6 +33,7 @@ export function SessionToggle({ sessionId }: SessionToggleButton) {
           description: "The session has been toggled",
         });
         await utils.elections.session.invalidate();
+        await utils.voter.activeSession.invalidate();
       },
 
       async onError(error) {
@@ -52,8 +53,14 @@ export function SessionToggle({ sessionId }: SessionToggleButton) {
 
   return (
     <Button
-      variant="outline"
+      variant={session.data?.status === "completed" ? "default" : "outline"}
       size="sm"
+      className={
+        session.data?.status === "completed"
+          ? "bg-green-600 text-green-200 dark:bg-green-500 dark:text-white"
+          : ""
+      }
+      disabled={session.data?.status === "completed"}
       onClick={() => onSessionToggled(sessionId)}
     >
       {readableStatus(session.data?.status ?? "not_started")}

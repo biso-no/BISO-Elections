@@ -48,7 +48,7 @@ export function CreateStatuteChange({ sessionId }: { sessionId: string }) {
     api.elections.createStatuteChange.useMutation({
       async onSuccess() {
         form.reset();
-        await utils.elections.sessions.invalidate();
+        await utils.elections.statuteChanges.invalidate();
       },
 
       async onError(error) {

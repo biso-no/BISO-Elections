@@ -1,6 +1,4 @@
-import { VoterTable } from "~/app/_components/voter-table";
 import { api } from "~/trpc/server";
-import { InviteUsers } from "./_components/invite-button";
 import { Table } from "./_components/voter-table";
 
 export default async function AdminVotersPage({

@@ -261,6 +261,7 @@ export const electionVote = pgTable("election_vote", {
     () => electionCandidate.id,
     { onDelete: "cascade" },
   ),
+  weight: integer("weight").notNull(),
 });
 
 export const electionVoteRelations = relations(electionVote, ({ one }) => ({

@@ -81,8 +81,8 @@ export function TeamSwitcher({ className }: TeamSwitcherProps) {
         <PopoverContent className="w-[200px] p-0">
           <Command>
             <CommandList>
-              <CommandInput placeholder="Search team..." />
-              <CommandEmpty>No team found.</CommandEmpty>
+              <CommandInput placeholder="Search election..." />
+              <CommandEmpty>No election found.</CommandEmpty>
               <CommandGroup key="my-elections" heading="My Elections">
                 {elections?.map((election) => (
                   <CommandItem
