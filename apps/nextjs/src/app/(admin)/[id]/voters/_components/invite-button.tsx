@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import Link from "next/link";
+import * as XLSX from "xlsx";
 
 import { Button } from "~/components/ui/button";
 import {
@@ -37,9 +39,60 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
   const toast = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const [voters, setVoters] = useState<VoterInvitation[]>([
     { name: "", email: "", electionId: "", vote_weight: 1 },
   ]);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false); // Set drag over state to false
+  };
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(true); // Set drag over state to true
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      const file = files[0];
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target!.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // Skip the first row (headers) and then filter and map
+        const filteredRows = json
+          .slice(1) // Start processing from the second row
+          .filter((row) => {
+            // Assuming Name is in column A (index 0), Email in column B (index 1), and Weight in column C (index 2)
+            // Adjust the indices based on your Excel sheet structure
+            return row[0] && row[1] && row[2]; // Check that each required field is not empty
+          })
+          .map((validRow) => ({
+            name: validRow[0],
+            email: validRow[1],
+            electionId: electionId,
+            vote_weight: validRow[2],
+          }));
+
+        setVoters((prevVoters) => [...prevVoters, ...filteredRows]);
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+  };
 
   const addRow = () => {
     setVoters((prevVoters) => [
@@ -54,17 +107,34 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
     );
   };
 
+  //A handle download helper. The template is stored in /public/tmpl/voter-import-template.xlsx
+  const handleDownloadTemplate = () => {
+    const templateFile = "/tmpl/voter-import-template.xlsx";
+    const link = document.createElement("a");
+    link.href = templateFile;
+    link.download = "voter-import-template.xlsx";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           <Button>Invite voters</Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onDragLeave={handleDragLeave}
+          onDragEnter={handleDragEnter}
+        >
           <DialogHeader>
             <DialogTitle>Invite voters</DialogTitle>
             <DialogDescription>
-              Invite voters to the election.
+              Invite voters to the election. You can also drag and drop an Excel
+              document containing voter details here.
             </DialogDescription>
           </DialogHeader>
           {voters.map((voter, index) => (
@@ -110,6 +180,9 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
           ))}
           <Button onClick={addRow}>Add row</Button>
           <DialogFooter>
+            <Button variant="outline" onClick={handleDownloadTemplate}>
+              Download template
+            </Button>
             <DialogClose asChild>
               <Button variant="ghost">Cancel</Button>
             </DialogClose>

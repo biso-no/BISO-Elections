@@ -160,8 +160,8 @@ export function Session({ id }: { id: string }) {
               <Badge>{formatSessionStatus(session.status)}</Badge>
             </h1>
             <div className="flex flex-wrap items-center gap-2">
-              <NotYetVoted sessionId={session.id} electionId={id} />
               <SessionToggle sessionId={session.id} />
+              <NotYetVoted sessionId={session.id} electionId={id} />
               <PreviewSession session={session} />
               <CreatePosition sessionId={session.id} />
               <CreateStatuteChange sessionId={session.id} />

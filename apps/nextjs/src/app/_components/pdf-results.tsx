@@ -160,7 +160,7 @@ export const PDFResults = ({ electionId, disabled }: PDFResultsProps) => {
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
+      <DialogTrigger asChild disabled={disabled}>
         <Button size="sm" variant="ghost" className="gap-2" disabled={disabled}>
           <FileTextIcon /> Print Results
         </Button>

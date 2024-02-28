@@ -84,9 +84,6 @@ export function UsersTable({ users }: UserTableProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="election_participant">
-                      Election Participant
-                    </SelectItem>
                     <SelectItem value="user">User</SelectItem>
                   </SelectContent>
                 </Select>
