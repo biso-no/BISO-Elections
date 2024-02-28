@@ -593,10 +593,12 @@ export const electionsRouter = createTRPCRouter({
     .input(
       z.object({
         sessionId: z.string(),
+        electionId: z.string(),
       }),
     )
     .query(async ({ ctx, input }) => {
       const voters = await ctx.db.query.electionVoter.findMany({
+        where: eq(schema.electionVoter.electionId, input.electionId),
         with: {
           profile: {
             columns: {
