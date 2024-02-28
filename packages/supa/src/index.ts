@@ -11,7 +11,7 @@ export const inviteVoter = async (email: string) => {
     const { data: updateUserData, error: updateUserError } =
       await adminAuthClient.updateUserById(data.user.id, {
         app_metadata: {
-          roles: ["election_participant"],
+          roles: ["user"],
         },
       });
     if (updateUserError) {
