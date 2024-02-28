@@ -568,7 +568,7 @@ export const electionsRouter = createTRPCRouter({
         .where(eq(schema.electionPosition.id, input));
     }),
   //A procedure to get all voters who have not yet voted for a given session.
-  votersWhoHaveNotVoted: protectedProcedure
+  votersWhoHaveNotVoted: adminProcedure
     .input(
       z.object({
         sessionId: z.string(),
