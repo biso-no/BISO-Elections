@@ -156,6 +156,8 @@ export const electionSession = pgTable("election_session", {
     .notNull()
     .references(() => election.id, { onDelete: "cascade" }),
   status: electionSessionStatus("status").notNull(),
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
 });
 
 export const electionSessionRelations = relations(
@@ -262,6 +264,7 @@ export const electionVote = pgTable("election_vote", {
     { onDelete: "cascade" },
   ),
   weight: integer("weight").notNull(),
+  createdAt: timestamp("created_at").notNull(),
 });
 
 export const electionVoteRelations = relations(electionVote, ({ one }) => ({

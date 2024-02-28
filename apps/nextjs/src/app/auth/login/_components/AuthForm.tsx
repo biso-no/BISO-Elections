@@ -61,7 +61,7 @@ export function AuthForm() {
   };
 
   return (
-    <Card className="max-w-sm space-y-6 rounded-lg border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-700">
+    <Card className="max-w-sm space-y-6 rounded-lg border  p-6 shadow-lg">
       <CardHeader className="space-y-2 text-center">
         <CardTitle className="text-2xl">Sign in to your account</CardTitle>
         <CardDescription>

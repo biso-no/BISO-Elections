@@ -160,6 +160,7 @@ export const votersRouter = createTRPCRouter({
           candidateId,
           sessionId: input.sessionId,
           weight: vote_weight,
+          createdAt: new Date(),
         });
       }
     }),

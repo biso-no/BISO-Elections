@@ -271,20 +271,20 @@ export const electionsRouter = createTRPCRouter({
         for (const session of otherSessions) {
           await ctx.db
             .update(schema.electionSession)
-            .set({ status: "completed" })
+            .set({ status: "completed", endedAt: new Date() })
             .where(eq(schema.electionSession.id, session.id));
         }
 
         return ctx.db
           .update(schema.electionSession)
-          .set({ status: "in_progress" })
+          .set({ status: "in_progress", startedAt: new Date() })
           .where(eq(schema.electionSession.id, input.id));
       }
 
       if (session.status === "in_progress") {
         return ctx.db
           .update(schema.electionSession)
-          .set({ status: "completed" })
+          .set({ status: "completed", endedAt: new Date() })
           .where(eq(schema.electionSession.id, input.id));
       }
     }),
