@@ -2,6 +2,7 @@
 
 import React from "react";
 
+import { NotYetVoted } from "~/app/_components/not-yet-voted";
 import { PDFResults } from "~/app/_components/pdf-results";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -25,7 +26,6 @@ import { CreateStatuteChange } from "./create-statute-change";
 import { DeleteSession } from "./delete-session";
 import { PreviewSession } from "./preview-session";
 import { SessionToggle } from "./session-toggle";
-import { NotYetVoted } from "~/app/_components/not-yet-voted";
 
 export function PositionTable({ sessionId }: { sessionId: string }) {
   const { data: positions } = api.elections.positions.useQuery(sessionId);
@@ -149,7 +149,7 @@ export function Session({ id }: { id: string }) {
     <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
       <div className="flex flex-wrap justify-end">
         <CreateSession electionId={id} />
-        <PDFResults electionId={id} />
+        <PDFResults electionId={id} disabled={data?.length === 0} />
       </div>
       {data?.map((session) => (
         <React.Fragment key={session.id}>

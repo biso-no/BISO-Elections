@@ -152,15 +152,16 @@ function ElectionResultsPDF({ electionResults }: ElectionResults) {
 
 interface PDFResultsProps {
   electionId: string;
+  disabled?: boolean;
 }
 // Define the PDF results component
-export const PDFResults = ({ electionId }: PDFResultsProps) => {
+export const PDFResults = ({ electionId, disabled }: PDFResultsProps) => {
   const { data: electionResults } = api.elections.results.useQuery(electionId);
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size="sm" variant="ghost" className="gap-2">
+        <Button size="sm" variant="ghost" className="gap-2" disabled={disabled}>
           <FileTextIcon /> Print Results
         </Button>
       </DialogTrigger>
