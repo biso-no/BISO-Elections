@@ -76,6 +76,20 @@ export const signInWithAzure = async () => {
   throw res.error;
 };
 
+export const signInWithCode = async (email: string, token: string) => {
+  const supabase = createServerActionClient({ cookies });
+  const origin = headers().get("origin");
+
+  const res = await supabase.auth.verifyOtp({
+    email,
+    token,
+    type: "invite",
+  });
+
+  if (res.data.session) redirect(`${origin}/`);
+  throw res.error;
+};
+
 export const signOut = async () => {
   const supabase = createServerActionClient({ cookies });
 

@@ -14,11 +14,14 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { useToast } from "~/components/ui/use-toast";
 import { useInitials } from "~/lib/utils";
+import { api } from "~/trpc/react";
 import { signOut } from "../auth/actions";
 
-export function ProfileDropdown({ user }) {
+export function ProfileDropdown() {
   const router = useRouter();
   const toast = useToast();
+
+  const { data: user } = api.auth.me.useQuery();
 
   const onSignOut = async () => {
     console.log("signing out");
@@ -32,7 +35,7 @@ export function ProfileDropdown({ user }) {
     });
   };
 
-  const initials: string = useInitials("Markus Heien");
+  const initials: string = useInitials(user?.user_metadata?.full_name ?? "");
 
   //If user is provided, trigger onSignOut. If not, redirect to sign in page.
   const handleSignOut = () => {

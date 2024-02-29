@@ -2,7 +2,7 @@ import { adminAuthClient } from "../index";
 
 export const inviteVoter = async (email: string) => {
   const { error, data } = await adminAuthClient.inviteUserByEmail(email, {
-    redirectTo: "http://localhost:3000/auth/callback",
+    redirectTo: "http://localhost:3000/",
   });
   if (error) {
     console.error("Error inviting user:", error);

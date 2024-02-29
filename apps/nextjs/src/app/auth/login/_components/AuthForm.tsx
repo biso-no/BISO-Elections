@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -27,21 +27,44 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { useToast } from "~/components/ui/use-toast";
-import { signInWithAzure, signInWithEmail } from "../../actions";
+import {
+  signInWithAzure,
+  signInWithCode,
+  signInWithEmail,
+} from "../../actions";
 
 const formSchema = z.object({
   email: z.string().email(),
 });
+
+const codeFormSchema = z.object({
+  code: z.string(),
+});
+
+interface AuthFormProps {
+  code?: string;
+}
 
 export function AuthForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [logo, setLogo] = useState("/logos/logo-light.svg");
 
+  const searchParams = useSearchParams();
+  const code = searchParams.get("code");
+  const email = searchParams.get("email");
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
+    },
+  });
+
+  const codeForm = useForm<z.infer<typeof codeFormSchema>>({
+    resolver: zodResolver(codeFormSchema),
+    defaultValues: {
+      code: code ?? "",
     },
   });
 
@@ -59,6 +82,85 @@ export function AuthForm() {
 
     return;
   };
+
+  const codeSubmit = async (values: z.infer<typeof codeFormSchema>) => {
+    const response = await signInWithCode(email, code);
+    if (response.error) {
+      toast({
+        title: "Error",
+        description: response.error.message,
+        variant: "destructive",
+      });
+
+      return;
+    }
+  };
+
+  //If code exists, we need to render another component instead, where the user is prompted to enter the code and sign in
+  if (code) {
+    return (
+      <Card className="max-w-sm space-y-6 rounded-lg border  p-6 shadow-lg">
+        <CardHeader className="space-y-2 text-center">
+          <CardTitle className="text-2xl">Sign in to your account</CardTitle>
+          <CardDescription>
+            By logging in, you accept our{"\n                            "}
+            <Link
+              className="text-blue-500 hover:text-blue-700"
+              href="https://biso.no/terms"
+            >
+              terms
+            </Link>
+            {"\n                            "}
+            and
+            {"\n                            "}
+            <Link
+              className="text-blue-500 hover:text-blue-700"
+              href="https://biso.no/privacy"
+            >
+              privacy policy
+            </Link>
+            .{"\n                            "}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4">
+          <Form {...codeForm}>
+            <form onSubmit={codeForm.handleSubmit(codeSubmit)}>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <div className="grid gap-2">
+                  <FormField
+                    control={codeForm.control}
+                    name="code"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Code</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="text"
+                            placeholder="Enter code"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          Enter the code sent to your email.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+              <Button type="submit">Sign in</Button>
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="max-w-sm space-y-6 rounded-lg border  p-6 shadow-lg">

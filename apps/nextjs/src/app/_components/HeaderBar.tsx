@@ -1,4 +1,5 @@
 import { ModeToggle } from "~/components/theme-toggle";
+import { api } from "~/trpc/server";
 import { getUser } from "../auth/actions";
 import { DrawerNav } from "./drawer";
 import { ProfileDropdown } from "./profile-dropdown";
@@ -18,7 +19,7 @@ export async function HeaderBar() {
       {/* Right side, always aligned to the right */}
       <div className="flex items-center gap-4">
         <ModeToggle />
-        {user && <ProfileDropdown user={user} />}
+        {user && <ProfileDropdown />}
       </div>
     </header>
   );
