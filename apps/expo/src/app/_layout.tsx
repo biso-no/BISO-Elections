@@ -1,4 +1,4 @@
-import { Suspense, useEffect } from "react";
+import React, { Suspense, useEffect } from "react";
 import { useColorScheme } from "react-native";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -19,8 +19,16 @@ import { supabase } from "../utils/supabase";
 SplashScreen.preventAutoHideAsync();
 // This is the main layout of the app
 // It wraps your pages with the providers they need
+
+export const unstable_settings = {
+  // Ensure that reloading on `/modal` keeps a back button present.
+  initialRouteName: "(tabs)",
+};
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+
+  const [tabIndex, setTabIndex] = React.useState(0);
 
   const [loaded] = useFonts({
     Inter: require("@tamagui/font-inter/otf/Inter-Medium.otf"),
@@ -54,11 +62,8 @@ export default function RootLayout() {
                    * @see https://expo.github.io/router/docs/guides/modals
                    */}
                   <Stack.Screen
-                    name="profile"
-                    options={{
-                      presentation: "modal",
-                      headerTitle: () => <></>,
-                    }}
+                    name="(tabs)"
+                    options={{ headerShown: false }}
                   />
                 </Stack>
                 <StatusBar />

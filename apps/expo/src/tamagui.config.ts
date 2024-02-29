@@ -33,7 +33,7 @@ const animations = createAnimations({
 export const config = createTamagui({
   themes,
   animations,
-  defaultTheme: "dark",
+  defaultTheme: "light",
   shorthands,
   tokens,
   fonts: {
