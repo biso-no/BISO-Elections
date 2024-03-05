@@ -21,7 +21,6 @@ import { api } from "~/trpc/react";
 
 interface InviteUsersProps {
   electionId: string;
-  onInvite: (voters: VoterInvitation[], electionId: string) => void;
 }
 
 interface VoterInvitation {
@@ -31,7 +30,7 @@ interface VoterInvitation {
   vote_weight: number;
 }
 
-export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
+export function InviteUsers({ electionId }: InviteUsersProps) {
   //A button that opens a dialog. In the dialog there are 3 inputs per row. Include a button to add more rows. Each row represent a user to invite.
   //When the user clicks the invite button, the users are invited and the dialog closes.
 
@@ -43,6 +42,24 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
   const [voters, setVoters] = useState<VoterInvitation[]>([
     { name: "", email: "", electionId: "", vote_weight: 1 },
   ]);
+
+  const { mutateAsync: inviteVoters } =
+    api.elections.createMultipleVoters.useMutation({
+      onSuccess: async () => {
+        await utils.elections.voters.invalidate();
+        toast.toast({
+          title: "Voters invited",
+          description: "The voters have been invited.",
+        });
+      },
+      onError: (error) => {
+        toast.toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -72,14 +89,10 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
         const worksheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        // Skip the first row (headers) and then filter and map
-        const filteredRows = json
-          .slice(1) // Start processing from the second row
-          .filter((row) => {
-            // Assuming Name is in column A (index 0), Email in column B (index 1), and Weight in column C (index 2)
-            // Adjust the indices based on your Excel sheet structure
-            return row[0] && row[1] && row[2]; // Check that each required field is not empty
-          })
+        // Process rows, skipping the first (header) and filtering out incomplete entries
+        const newVoters = json
+          .slice(1)
+          .filter((row) => row[0] && row[1] && row[2])
           .map((validRow) => ({
             name: validRow[0],
             email: validRow[1],
@@ -87,7 +100,8 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
             vote_weight: validRow[2],
           }));
 
-        setVoters((prevVoters) => [...prevVoters, ...filteredRows]);
+        // Replace existing voters with new voters from Excel file
+        setVoters(newVoters);
       };
 
       reader.readAsArrayBuffer(file);
@@ -116,6 +130,10 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleInvite = async () => {
+    await inviteVoters({ voters, electionId });
   };
 
   return (
@@ -187,7 +205,7 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
             <Button
-              onClick={() => onInvite(voters, electionId)}
+              onClick={() => handleInvite()}
               disabled={voters.length === 0}
             >
               Invite

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 import { ProfileDropdown } from "~/app/_components/profile-dropdown";
@@ -11,7 +12,12 @@ export async function HeaderBar() {
     <>
       <header className="top-10 flex h-14 items-center gap-4 px-6">
         <Link className="lg:hidden" href="#">
-          <VoteIcon className="h-6 w-6" />
+          <Image
+            src="/logos/logo-light.svg"
+            alt="Logo"
+            width={32}
+            height={32}
+          />
           <span className="sr-only">Home</span>
         </Link>
         <div className="w-full flex-1"></div>
