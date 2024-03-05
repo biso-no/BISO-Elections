@@ -383,26 +383,99 @@ export const electionsRouter = createTRPCRouter({
         })
         .where(eq(schema.electionCandidate.id, input.id));
     }),
-  voters: adminProcedure.input(z.string()).query(async ({ ctx, input }) => {
-    return ctx.db.query.electionVoter.findMany({
-      where: eq(schema.electionVoter.electionId, input),
-      columns: {
-        id: true,
-        vote_weight: true,
-        electionId: true,
-        profileId: true,
-      },
-      with: {
-        profile: {
-          columns: {
-            id: true,
-            name: true,
-            email: true,
+  voters: adminProcedure
+    .input(
+      z.object({
+        electionId: z.string(),
+        limit: z.number().optional(),
+        page: z.number().optional(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const limit = input.limit ?? 10; // Default limit if not specified
+      const page = input.page ?? 1; // Default to first page if not specified
+      const offset = (page - 1) * limit; // Calculate offset
+
+      // Fetch the page of voters
+      const voters = await ctx.db.query.electionVoter.findMany({
+        where: eq(schema.electionVoter.electionId, input.electionId),
+        limit: limit,
+        offset: offset,
+        columns: {
+          id: true,
+          vote_weight: true,
+          electionId: true,
+          profileId: true,
+        },
+        with: {
+          profile: {
+            columns: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-      },
-    });
-  }),
+      });
+
+      // Inefficient workaround to count: fetch all IDs matching the criteria
+      // Note: This is not recommended for large datasets
+      const allVoterIds = await ctx.db.query.electionVoter.findMany({
+        where: eq(schema.electionVoter.electionId, input.electionId),
+        columns: {
+          id: true, // Only fetch the ID to minimize data transfer
+        },
+      });
+
+      const totalCount = allVoterIds.length;
+
+      return {
+        voters,
+        totalCount,
+      };
+    }),
+
+  deleteVoter: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db
+        .delete(schema.electionVoter)
+        .where(eq(schema.electionVoter.id, input.id));
+    }),
+  updateVoter: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+        vote_weight: z.number(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db
+        .update(schema.electionVoter)
+        .set({
+          vote_weight: input.vote_weight,
+        })
+        .where(eq(schema.electionVoter.id, input.id));
+    }),
+  voter: adminProcedure
+    .input(
+      z.object({
+        id: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      return ctx.db.query.electionVoter.findFirst({
+        where: eq(schema.electionVoter.id, input.id),
+        columns: {
+          id: true,
+          vote_weight: true,
+        },
+      });
+    }),
   createVoter: adminProcedure
     .input(
       z.object({

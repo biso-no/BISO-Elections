@@ -21,7 +21,6 @@ import { api } from "~/trpc/react";
 
 interface InviteUsersProps {
   electionId: string;
-  onInvite: (voters: VoterInvitation[], electionId: string) => void;
 }
 
 interface VoterInvitation {
@@ -31,7 +30,7 @@ interface VoterInvitation {
   vote_weight: number;
 }
 
-export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
+export function InviteUsers({ electionId }: InviteUsersProps) {
   //A button that opens a dialog. In the dialog there are 3 inputs per row. Include a button to add more rows. Each row represent a user to invite.
   //When the user clicks the invite button, the users are invited and the dialog closes.
 
@@ -43,6 +42,24 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
   const [voters, setVoters] = useState<VoterInvitation[]>([
     { name: "", email: "", electionId: "", vote_weight: 1 },
   ]);
+
+  const { mutateAsync: inviteVoters } =
+    api.elections.createMultipleVoters.useMutation({
+      onSuccess: async () => {
+        await utils.elections.voters.invalidate();
+        toast.toast({
+          title: "Voters invited",
+          description: "The voters have been invited.",
+        });
+      },
+      onError: (error) => {
+        toast.toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -115,6 +132,10 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
     document.body.removeChild(link);
   };
 
+  const handleInvite = async () => {
+    await inviteVoters({ voters, electionId });
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -184,7 +205,7 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
               <Button variant="ghost">Cancel</Button>
             </DialogClose>
             <Button
-              onClick={() => onInvite(voters, electionId)}
+              onClick={() => handleInvite()}
               disabled={voters.length === 0}
             >
               Invite
