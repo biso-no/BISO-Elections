@@ -72,14 +72,10 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
         const worksheet = workbook.Sheets[sheetName];
         const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        // Skip the first row (headers) and then filter and map
-        const filteredRows = json
-          .slice(1) // Start processing from the second row
-          .filter((row) => {
-            // Assuming Name is in column A (index 0), Email in column B (index 1), and Weight in column C (index 2)
-            // Adjust the indices based on your Excel sheet structure
-            return row[0] && row[1] && row[2]; // Check that each required field is not empty
-          })
+        // Process rows, skipping the first (header) and filtering out incomplete entries
+        const newVoters = json
+          .slice(1)
+          .filter((row) => row[0] && row[1] && row[2])
           .map((validRow) => ({
             name: validRow[0],
             email: validRow[1],
@@ -87,7 +83,8 @@ export function InviteUsers({ electionId, onInvite }: InviteUsersProps) {
             vote_weight: validRow[2],
           }));
 
-        setVoters((prevVoters) => [...prevVoters, ...filteredRows]);
+        // Replace existing voters with new voters from Excel file
+        setVoters(newVoters);
       };
 
       reader.readAsArrayBuffer(file);
