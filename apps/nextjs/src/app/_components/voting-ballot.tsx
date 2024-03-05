@@ -81,6 +81,26 @@ export function VotingBallot({
     return <VotingBallotLoading />;
   }
 
+  if (!session) {
+    return (
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No session is currently active, please stand by.
+        </p>
+        <Button
+          variant="outline"
+          className="w-full"
+          onClick={async () => {
+            await utils.voter.activeSession.invalidate();
+            await utils.voter.hasVoted.invalidate();
+          }}
+        >
+          Refresh
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6 p-4">
       {session?.positions?.map((position) => (
@@ -145,7 +165,13 @@ export function VotingBallot({
           </CardContent>
         </Card>
       ))}
-      <Button onClick={handleSubmit}>Submit</Button>
+      <Button
+        onClick={handleSubmit}
+        disabled={selectedCandidateIds.length === 0}
+        className="w-full"
+      >
+        Submit
+      </Button>
     </div>
   );
 }

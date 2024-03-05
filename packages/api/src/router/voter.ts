@@ -1,3 +1,5 @@
+import { TRPCClientError } from "@trpc/client";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { and, desc, eq, schema } from "@acme/db";
@@ -144,7 +146,10 @@ export const votersRouter = createTRPCRouter({
       });
 
       if (hasVoted) {
-        throw new Error("You have already voted for this session");
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "User has already voted",
+        });
       }
 
       const voter = await ctx.db.query.electionVoter.findFirst({
