@@ -758,4 +758,124 @@ export const electionsRouter = createTRPCRouter({
         },
       });
     }),
+  //A procedure to calculate the average time for a vote to be cast for a given election. The average is calculated over all sessions and voters.
+  averageVoteTime: adminProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      const election = await ctx.db.query.election.findFirst({
+        where: eq(schema.election.id, input),
+        with: {
+          sessions: {
+            columns: {
+              startedAt: true,
+            },
+            with: {
+              votes: {
+                columns: {
+                  createdAt: true, // Ensure this matches your database schema
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!election) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Election not found",
+        });
+      }
+
+      if (election.sessions.length === 0) {
+        return 0;
+      }
+
+      let total = 0;
+      let count = 0;
+
+      for (const session of election.sessions) {
+        for (const vote of session.votes) {
+          if (!session.startedAt) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Session startedAt not found",
+            });
+          }
+          //Example time: 2024-03-05 21:28:22.496
+          const timeDiff =
+            new Date(vote.createdAt).getTime() -
+            new Date(session.startedAt).getTime();
+          total += timeDiff;
+          count++;
+        }
+      }
+
+      if (count === 0) {
+        return 0;
+      }
+
+      const averageInSeconds = (total / count / 1000).toFixed(1);
+
+      return averageInSeconds;
+    }),
+  votesByElection: adminProcedure
+    .input(
+      z.object({
+        electionId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // Fetch the election data
+      const electionData = await ctx.db.query.election.findFirst({
+        where: eq(schema.election.id, input.electionId),
+        with: {
+          sessions: {
+            with: {
+              votes: {
+                columns: {
+                  candidateId: true,
+                },
+                with: {
+                  candidate: {
+                    columns: {
+                      name: true,
+                      id: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!electionData?.sessions) {
+        return [];
+      }
+
+      // Transform and aggregate the data
+      const votesByCandidate = {};
+
+      electionData.sessions.forEach((session) => {
+        session.votes.forEach((vote) => {
+          const { candidate } = vote;
+          if (candidate) {
+            const candidateKey = candidate.id;
+            if (!votesByCandidate[candidateKey]) {
+              votesByCandidate[candidateKey] = {
+                candidate: candidate.name,
+                votes: 0,
+              };
+            }
+            votesByCandidate[candidateKey].votes += 1; // Assuming each vote object represents a single vote
+          }
+        });
+      });
+
+      // Convert the aggregated data into an array suitable for the ResponsiveBar component
+      const transformedData = Object.values(votesByCandidate);
+
+      return transformedData;
+    }),
 });
