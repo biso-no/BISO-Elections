@@ -18,7 +18,6 @@ export function TRPCReactProvider(props: {
 
   const [trpcClient] = useState(() =>
     api.createClient({
-      transformer: SuperJSON,
       links: [
         loggerLink({
           enabled: (op) =>
@@ -26,6 +25,7 @@ export function TRPCReactProvider(props: {
             (op.direction === "down" && op.result instanceof Error),
         }),
         unstable_httpBatchStreamLink({
+          transformer: SuperJSON,
           url: getBaseUrl() + "/api/trpc",
           async headers() {
             const headers = new Map(await props.headersPromise);
