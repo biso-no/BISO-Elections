@@ -5,8 +5,8 @@ import { and, desc, eq, schema } from "@acme/db";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const votersRouter = createTRPCRouter({
-  all: protectedProcedure.query(({ ctx }) => {
-    return ctx.db.query.electionVoter.findMany({
+  all: protectedProcedure.query(async ({ ctx }) => {
+    const allElections = await ctx.db.query.electionVoter.findMany({
       where: eq(schema.electionVoter.profileId, ctx.user.id),
       with: {
         election: {
@@ -14,6 +14,80 @@ export const votersRouter = createTRPCRouter({
             name: true,
             campus: true,
             id: true,
+          },
+          with: {
+            sessions: {
+              columns: {
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const notStartedElections = allElections.filter(
+      (election) =>
+        election.election.sessions.filter(
+          (session) => session.status === "not_started",
+        ).length > 0,
+    );
+
+    const onGoingElections = allElections.filter(
+      (election) =>
+        election.election.sessions.filter(
+          (session) => session.status === "in_progress",
+        ).length > 0,
+    );
+
+    const completedElections = allElections.filter(
+      (election) =>
+        election.election.sessions.filter(
+          (session) => session.status === "completed",
+        ).length > 0,
+    );
+
+    return {
+      onGoingElections,
+      completedElections,
+      notStartedElections,
+    };
+  }),
+  //Return all elections the given user has been added to as a voter
+  mine: protectedProcedure.query(({ ctx }) => {
+    return ctx.db.query.electionVoter.findMany({
+      where: eq(schema.electionVoter.profileId, ctx.user.id),
+      with: {
+        election: {
+          columns: {
+            name: true,
+            id: true,
+          },
+          with: {
+            sessions: {
+              columns: {
+                id: true,
+                name: true,
+                status: true,
+              },
+              with: {
+                positions: {
+                  columns: {
+                    id: true,
+                    name: true,
+                  },
+                  with: {
+                    candidates: {
+                      columns: {
+                        id: true,
+
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },

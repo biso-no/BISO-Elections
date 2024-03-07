@@ -28,8 +28,6 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
 
-  const [tabIndex, setTabIndex] = React.useState(0);
-
   const [loaded] = useFonts({
     Inter: require("@tamagui/font-inter/otf/Inter-Medium.otf"),
     InterBold: require("@tamagui/font-inter/otf/Inter-Bold.otf"),
@@ -50,7 +48,7 @@ export default function RootLayout() {
           <Suspense fallback={<Text>Loading...</Text>}>
             <Theme name={colorScheme}>
               <ThemeProvider
-                value={colorScheme === "light" ? DefaultTheme : DarkTheme}
+                value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
               >
                 {/*
                  * The Stack component displays the current page.

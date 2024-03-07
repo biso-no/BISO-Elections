@@ -16,17 +16,27 @@ const animations = createAnimations({
     damping: 10,
     mass: 0.9,
     stiffness: 100,
+    delay: 0,
   },
   lazy: {
     type: "spring",
     damping: 20,
     stiffness: 60,
+    delay: 0,
   },
   quick: {
     type: "spring",
     damping: 20,
     mass: 1.2,
     stiffness: 250,
+    delay: 0,
+  },
+  slowest: {
+    type: "spring",
+    damping: 20,
+    mass: 1.2,
+    stiffness: 350,
+    delay: 0,
   },
 });
 

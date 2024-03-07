@@ -12,8 +12,9 @@ export function EmailForm() {
   const [isVerifyCodeVisible, setIsVerifyCodeVisible] = useState(false);
 
   const signInWithEmail = async () => {
-    const { error } = await supabase.auth.signInWithOtp({ email });
+    const { error, data } = await supabase.auth.signInWithOtp({ email });
     if (error) Alert.alert("Error", error.message);
+    console.log(data);
   };
 
   return (
