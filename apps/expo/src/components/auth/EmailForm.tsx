@@ -1,40 +1,84 @@
 import { useState } from "react";
-import { Alert } from "react-native";
+import { ActivityIndicator, Alert } from "react-native";
+import { useRouter } from "expo-router";
 import { useSupabaseClient } from "@supabase/auth-helpers-react";
-import { Button, Card, Input, Text, View } from "tamagui";
+import { Button, Input, Text, View, YStack } from "tamagui";
 
-import { CodeForm } from "./CodeForm";
+import { MyStack } from "../MyStack";
 
 export function EmailForm() {
   const supabase = useSupabaseClient();
-
   const [email, setEmail] = useState("");
-  const [isVerifyCodeVisible, setIsVerifyCodeVisible] = useState(false);
+  const [code, setCode] = useState("");
+  const [phase, setPhase] = useState<"inputEmail" | "inputCode">("inputEmail");
+  const [error, setError] = useState("");
 
-  const signInWithEmail = async () => {
-    const { error, data } = await supabase.auth.signInWithOtp({ email });
-    if (error) Alert.alert("Error", error.message);
-    console.log(data);
+  const router = useRouter();
+
+  const handleLogin = async () => {
+    if (phase === "inputEmail") {
+      const { error } = await supabase.auth.signInWithOtp({ email });
+      if (error) {
+        setError(error.message);
+      } else {
+        setPhase("inputCode");
+        setError("");
+      }
+    } else if (phase === "inputCode") {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token: code,
+        type: "email",
+      });
+      if (error) {
+        setError(error.message);
+      } else {
+        setError("Successfully signed in");
+        router.push("/profile");
+      }
+    }
   };
 
   return (
-    <View>
-      {!isVerifyCodeVisible ? (
-        <View>
+    <View flex={1} justifyContent="center" alignItems="center" padding="$4">
+      <Text size="$4" fontWeight="bold" marginBottom="$2">
+        {phase === "inputEmail" ? "Sign In" : "Enter Code"}
+      </Text>
+      {phase === "inputEmail" && (
+        <>
           <Input
-            placeholderTextColor="#A1A1A9" // zinc-400
+            placeholder="Email Address"
             value={email}
-            autoCapitalize="none"
+            type="email"
             onChangeText={setEmail}
-            placeholder="Email"
+            width={200}
+            marginBottom="$2"
           />
-          <Button onPress={signInWithEmail}>Sign in with email</Button>
-          <Button onPress={() => setIsVerifyCodeVisible(true)}>
-            Sign in with code
-          </Button>
-        </View>
-      ) : (
-        <CodeForm />
+          {error && (
+            <Text color="red" marginBottom="$2">
+              {error}
+            </Text>
+          )}
+          <Button onPress={handleLogin}>Send Magic Link</Button>
+        </>
+      )}
+      {phase === "inputCode" && (
+        <>
+          <Input
+            placeholder="Verification Code"
+            value={code}
+            onChangeText={setCode}
+            width={200}
+            marginBottom="$2"
+          />
+          {error && (
+            <Text color="red" marginBottom="$2">
+              {error}
+            </Text>
+          )}
+          {/* This button would not be used in a real-world scenario with Supabase's magic link auth. */}
+          <Button onPress={handleLogin}>Verify Code</Button>
+        </>
       )}
     </View>
   );

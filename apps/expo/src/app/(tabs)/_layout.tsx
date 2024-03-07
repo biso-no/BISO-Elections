@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack, Tabs } from "expo-router";
-import { Home, Settings2 } from "@tamagui/lucide-icons";
+import { Home, LayoutGrid, Settings2 } from "@tamagui/lucide-icons";
 
 import { AuthAvatar } from "~/components/header";
 import { api } from "~/utils/api";
@@ -20,13 +20,16 @@ export default function TabLayout() {
           options={{
             title: title,
             tabBarIcon: ({ size, color }) => <Home color={color} size={size} />,
+            headerRight: () => <AuthAvatar />,
           }}
         />
         <Tabs.Screen
           name="services/index"
           options={{
             title: "Services",
-            tabBarIcon: ({ size, color }) => <Home color={color} size={size} />,
+            tabBarIcon: ({ size, color }) => (
+              <LayoutGrid color={color} size={size} />
+            ),
           }}
         />
         <Tabs.Screen

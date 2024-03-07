@@ -46,10 +46,8 @@ export default function RootLayout() {
       <TRPCProvider>
         <TamaguiProvider config={config}>
           <Suspense fallback={<Text>Loading...</Text>}>
-            <Theme name={colorScheme}>
-              <ThemeProvider
-                value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-              >
+            <Theme name="light">
+              <ThemeProvider value={DefaultTheme}>
                 {/*
                  * The Stack component displays the current page.
                  * It also allows you to configure your screens

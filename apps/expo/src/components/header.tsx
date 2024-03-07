@@ -3,10 +3,16 @@ import { Button, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
+import { api } from "~/utils/api";
+
 export function AuthAvatar() {
   // const user = useUser();
   const router = useRouter();
   // const profileImage = user?.user_metadata.avatar_url as string | undefined;
+
+  const { data: user } = api.auth.me.useQuery();
+
+  if (user) return null;
 
   return <Button title="Sign In" onPress={() => router.push("/auth/")} />;
 
