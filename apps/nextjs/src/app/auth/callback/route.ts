@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
           .select();
 
         if (newProfileData && data.user) {
-          await api.admin.changeRole.mutate({
+          await api.admin.changeRole({
             userId: data.user?.id,
             role: "user",
           });
