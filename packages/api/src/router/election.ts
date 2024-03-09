@@ -533,6 +533,7 @@ export const electionsRouter = createTRPCRouter({
 
         if (existingProfile) {
           profileId = existingProfile.id;
+          const { data, error } = await inviteVoter(voter.email);
         } else {
           const { data, error } = await inviteVoter(voter.email);
 
