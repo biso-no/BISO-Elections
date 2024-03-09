@@ -2,7 +2,7 @@ import { api } from "~/trpc/server";
 import { UsersTable } from "./_components/users-table";
 
 export default async function Page() {
-  const users = await api.admin.all.query({
+  const users = await api.admin.all({
     page: 1,
   });
 

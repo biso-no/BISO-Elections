@@ -38,12 +38,9 @@ const formSchema = z.object({
 });
 
 const codeFormSchema = z.object({
+  email: z.string().email(),
   code: z.string(),
 });
-
-interface AuthFormProps {
-  code?: string;
-}
 
 export function AuthForm() {
   const router = useRouter();
@@ -53,6 +50,7 @@ export function AuthForm() {
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
   const email = searchParams.get("email");
+  const type = searchParams.get("type") as "email" | "invite";
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -65,6 +63,7 @@ export function AuthForm() {
     resolver: zodResolver(codeFormSchema),
     defaultValues: {
       code: code ?? "",
+      email: email ?? "",
     },
   });
 
@@ -83,17 +82,18 @@ export function AuthForm() {
     return;
   };
 
-  const codeSubmit = async (values: z.infer<typeof codeFormSchema>) => {
-    const response = await signInWithCode(email, code);
-    if (response.error) {
-      toast({
-        title: "Error",
-        description: response.error.message,
-        variant: "destructive",
-      });
+  const codeSubmit = async () => {
+    if (email && code) {
+      await signInWithCode(email, code, type);
 
       return;
     }
+
+    toast({
+      title: "Success",
+      description: "Sign in successful",
+      variant: "default",
+    });
   };
 
   //If code exists, we need to render another component instead, where the user is prompted to enter the code and sign in
@@ -132,6 +132,24 @@ export function AuthForm() {
               </div>
               <div className="grid gap-2">
                 <div className="grid gap-2">
+                  <FormField
+                    control={codeForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            type="email"
+                            placeholder="Enter email"
+                          />
+                        </FormControl>
+                        <FormDescription>Enter your email.</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={codeForm.control}
                     name="code"
