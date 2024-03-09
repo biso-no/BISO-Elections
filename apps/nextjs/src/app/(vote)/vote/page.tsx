@@ -3,7 +3,7 @@ import { api } from "~/trpc/server";
 import { SelectElection } from "./_components/select-election";
 
 export default async function VotePage() {
-  const elections = await api.voter.all.query();
+  const elections = await api.voter.all();
 
   if (elections.length === 0) {
     return (
