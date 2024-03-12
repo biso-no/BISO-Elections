@@ -48,6 +48,6 @@ export function TRPCReactProvider(props: {
 
 function getBaseUrl() {
   if (typeof window !== "undefined") return window.location.origin;
-  if (process.env.PROD_URL) return `https://${process.env.PROD_URL}`;
+  if (process.env.NEXT_PUBLIC_URL) return `${process.env.NEXT_PUBLIC_URL}`;
   return `http://localhost:${process.env.PORT ?? 3000}`;
 }
