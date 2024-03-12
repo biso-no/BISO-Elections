@@ -68,7 +68,7 @@ export const signInWithAzure = async () => {
 
   const res = await supabase.auth.signInWithOAuth({
     provider: "azure",
-    options: { redirectTo: `${process.env.NEXT_PUBLIC_URL}}/auth/callback` },
+    options: { redirectTo: `${origin}/auth/callback` },
   });
 
   if (res.data.url) redirect(res.data.url);
