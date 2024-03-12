@@ -32,7 +32,6 @@ COPY --from=builder /app/out/full/ .
 COPY turbo.json turbo.json
 
 ## This would be useful for browser environment variables that are actually baked at build time and you aren't passing them in otherwise.
-COPY .env .env 
 RUN CI=true SKIP_ENV_VALIDATION=true turbo run build --filter=@acme/nextjs...
 
 FROM base AS runner
