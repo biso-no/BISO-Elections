@@ -5,18 +5,20 @@ import { ResponsiveLine } from "@nivo/line";
 import { ResponsivePie } from "@nivo/pie";
 
 import { Card, CardContent } from "~/components/ui/card";
+import { useElectionId } from "~/lib/hooks/useElectionId";
+import { AverageVoteTime } from "./average-vote-time";
 
 export function DashboardStatistics() {
+  const electionId = useElectionId();
+
+  if (!electionId) {
+    return null;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <h2 className="text-lg font-semibold md:text-2xl">Statistics</h2>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardContent className="flex flex-col items-center gap-2">
-            <BarChart className="aspect-[4/3] h-64 w-full" />
-            <h3 className="font-semibold">Election Statistics</h3>
-          </CardContent>
-        </Card>
         <Card>
           <CardContent className="flex flex-col items-center gap-2">
             <PieChart className="aspect-[4/3] h-64 w-full" />
@@ -29,6 +31,7 @@ export function DashboardStatistics() {
             <h3 className="font-semibold">Votes Statistics</h3>
           </CardContent>
         </Card>
+        <AverageVoteTime electionId={electionId} />
       </div>
     </div>
   );

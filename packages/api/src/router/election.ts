@@ -759,4 +759,64 @@ export const electionsRouter = createTRPCRouter({
         },
       });
     }),
+  averageVoteTime: adminProcedure
+    .input(z.string())
+    .query(async ({ ctx, input }) => {
+      const election = await ctx.db.query.election.findFirst({
+        where: eq(schema.election.id, input),
+        with: {
+          sessions: {
+            columns: {
+              startedAt: true,
+            },
+            with: {
+              votes: {
+                columns: {
+                  createdAt: true, // Ensure this matches your database schema
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!election) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Election not found",
+        });
+      }
+
+      if (election.sessions.length === 0) {
+        return 0;
+      }
+
+      let total = 0;
+      let count = 0;
+
+      for (const session of election.sessions) {
+        for (const vote of session.votes) {
+          if (!session.startedAt) {
+            throw new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Session startedAt not found",
+            });
+          }
+          //Example time: 2024-03-05 21:28:22.496
+          const timeDiff =
+            new Date(vote.createdAt).getTime() -
+            new Date(session.startedAt).getTime();
+          total += timeDiff;
+          count++;
+        }
+      }
+
+      if (count === 0) {
+        return 0;
+      }
+
+      const averageInSeconds = (total / count / 1000).toFixed(1);
+
+      return averageInSeconds;
+    }),
 });
