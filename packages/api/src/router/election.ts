@@ -2,7 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { and, desc, eq, ne, schema } from "@acme/db";
-import { inviteVoter } from "@acme/supa";
+import { inviteVoter, sendInvitationEmail } from "@acme/supa";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -533,7 +533,9 @@ export const electionsRouter = createTRPCRouter({
 
         if (existingProfile) {
           profileId = existingProfile.id;
-          const { data, error } = await inviteVoter(voter.email);
+          const response = await sendInvitationEmail({
+            email: voter.email,
+          });
         } else {
           const { data, error } = await inviteVoter(voter.email);
 
