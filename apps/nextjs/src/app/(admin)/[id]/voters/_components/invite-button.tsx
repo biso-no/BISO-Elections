@@ -155,48 +155,51 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
               document containing voter details here.
             </DialogDescription>
           </DialogHeader>
-          {voters.map((voter, index) => (
-            <div key={index} className="flex space-x-4">
-              <Input
-                placeholder="Name"
-                value={voter.name}
-                onChange={(e) =>
-                  setVoters((prevVoters) =>
-                    prevVoters.map((v, i) =>
-                      i === index ? { ...v, name: e.target.value } : v,
-                    ),
-                  )
-                }
-              />
-              <Input
-                placeholder="Email"
-                value={voter.email}
-                onChange={(e) =>
-                  setVoters((prevVoters) =>
-                    prevVoters.map((v, i) =>
-                      i === index ? { ...v, email: e.target.value } : v,
-                    ),
-                  )
-                }
-              />
-              <Input
-                type="number"
-                placeholder="Vote weight"
-                value={voter.vote_weight}
-                onChange={(e) =>
-                  setVoters((prevVoters) =>
-                    prevVoters.map((v, i) =>
-                      i === index
-                        ? { ...v, vote_weight: parseInt(e.target.value) } // Update property name to vote_weight
-                        : v,
-                    ),
-                  )
-                }
-              />
-              <Button onClick={() => removeRow(index)}>Remove</Button>
-            </div>
-          ))}
-          <Button onClick={addRow}>Add row</Button>
+          {/* Use TailwindCSS for scrollable area */}
+          <div className="max-h-[400px] overflow-y-auto">
+            {voters.map((voter, index) => (
+              <div key={index} className="flex space-x-4">
+                <Input
+                  placeholder="Name"
+                  value={voter.name}
+                  onChange={(e) =>
+                    setVoters((prevVoters) =>
+                      prevVoters.map((v, i) =>
+                        i === index ? { ...v, name: e.target.value } : v,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  placeholder="Email"
+                  value={voter.email}
+                  onChange={(e) =>
+                    setVoters((prevVoters) =>
+                      prevVoters.map((v, i) =>
+                        i === index ? { ...v, email: e.target.value } : v,
+                      ),
+                    )
+                  }
+                />
+                <Input
+                  type="number"
+                  placeholder="Vote weight"
+                  value={voter.vote_weight}
+                  onChange={(e) =>
+                    setVoters((prevVoters) =>
+                      prevVoters.map((v, i) =>
+                        i === index
+                          ? { ...v, vote_weight: parseInt(e.target.value) } // Update property name to vote_weight
+                          : v,
+                      ),
+                    )
+                  }
+                />
+                <Button onClick={() => removeRow(index)}>Remove</Button>
+              </div>
+            ))}
+            <Button onClick={addRow}>Add row</Button>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={handleDownloadTemplate}>
               Download template
