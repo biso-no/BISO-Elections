@@ -2,7 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { and, desc, eq, ne, schema } from "@acme/db";
-import { inviteVoter, sendInvitationEmail } from "@acme/supa";
+import {
+  inviteVoter,
+  sendInvitationEmail,
+  sendInviteToExistingUser,
+} from "@acme/supa";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -406,6 +410,7 @@ export const electionsRouter = createTRPCRouter({
           vote_weight: true,
           electionId: true,
           profileId: true,
+          status: true,
         },
         with: {
           profile: {
@@ -450,7 +455,8 @@ export const electionsRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
-        vote_weight: z.number(),
+        vote_weight: z.number().optional(),
+        status: z.enum(["active", "deactivated"]).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -458,6 +464,7 @@ export const electionsRouter = createTRPCRouter({
         .update(schema.electionVoter)
         .set({
           vote_weight: input.vote_weight,
+          status: input.status,
         })
         .where(eq(schema.electionVoter.id, input.id));
     }),
@@ -473,6 +480,7 @@ export const electionsRouter = createTRPCRouter({
         columns: {
           id: true,
           vote_weight: true,
+          status: true,
         },
       });
     }),
@@ -533,9 +541,7 @@ export const electionsRouter = createTRPCRouter({
 
         if (existingProfile) {
           profileId = existingProfile.id;
-          const response = await sendInvitationEmail({
-            email: voter.email,
-          });
+          await sendInvitationEmail({ email: voter.email });
         } else {
           const { data, error } = await inviteVoter(voter.email);
 
@@ -761,6 +767,7 @@ export const electionsRouter = createTRPCRouter({
         },
       });
     }),
+  //A procedure to calculate the average time for a vote to be cast for a given election. The average is calculated over all sessions and voters.
   averageVoteTime: adminProcedure
     .input(z.string())
     .query(async ({ ctx, input }) => {
@@ -820,5 +827,64 @@ export const electionsRouter = createTRPCRouter({
       const averageInSeconds = (total / count / 1000).toFixed(1);
 
       return averageInSeconds;
+    }),
+  votesByElection: adminProcedure
+    .input(
+      z.object({
+        electionId: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // Fetch the election data
+      const electionData = await ctx.db.query.election.findFirst({
+        where: eq(schema.election.id, input.electionId),
+        with: {
+          sessions: {
+            with: {
+              votes: {
+                columns: {
+                  candidateId: true,
+                },
+                with: {
+                  candidate: {
+                    columns: {
+                      name: true,
+                      id: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!electionData?.sessions) {
+        return [];
+      }
+
+      // Transform and aggregate the data
+      const votesByCandidate = {};
+
+      electionData.sessions.forEach((session) => {
+        session.votes.forEach((vote) => {
+          const { candidate } = vote;
+          if (candidate) {
+            const candidateKey = candidate.id;
+            if (!votesByCandidate[candidateKey]) {
+              votesByCandidate[candidateKey] = {
+                candidate: candidate.name,
+                votes: 0,
+              };
+            }
+            votesByCandidate[candidateKey].votes += 1; // Assuming each vote object represents a single vote
+          }
+        });
+      });
+
+      // Convert the aggregated data into an array suitable for the ResponsiveBar component
+      const transformedData = Object.values(votesByCandidate);
+
+      return transformedData;
     }),
 });

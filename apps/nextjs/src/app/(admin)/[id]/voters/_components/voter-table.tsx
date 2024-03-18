@@ -92,10 +92,22 @@ export function VoterTable({ id }: { id: string }) {
   // Disable "Next" button on the last page
   const isOnLastPage = page >= totalPages;
 
-  const handleUpdateVoter = async (
-    voter: RouterOutputs["elections"]["voters"][0],
+  const editVoterStatus = async (
+    voter: RouterOutputs["elections"]["voters"]["voters"][number],
   ) => {
-    await editVoter(voter);
+    if (voter.status === "active") {
+      await editVoter({
+        status: "deactivated",
+        id: voter.id,
+      });
+    } else {
+      await editVoter({
+        status: "active",
+        id: voter.id,
+      });
+    }
+
+    await utils.elections.voters.invalidate();
   };
 
   return (
@@ -121,6 +133,14 @@ export function VoterTable({ id }: { id: string }) {
                     <MoreVertical />
                   </PopoverTrigger>
                   <PopoverContent>
+                    <Button
+                      variant="outline"
+                      onClick={async () => {
+                        await editVoterStatus(voter);
+                      }}
+                    >
+                      {voter.status === "active" ? "Deactivate" : "Activate"}
+                    </Button>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button>Delete</Button>

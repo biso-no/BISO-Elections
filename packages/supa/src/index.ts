@@ -30,7 +30,7 @@ export const sendInvitationEmail = async ({ email }: EmailOptions) => {
     type: "magiclink",
     email: email,
     options: {
-      redirectTo: `http://localhost:3000/`,
+      redirectTo: process.env.NEXT_PUBLIC_URL,
     },
   });
 
@@ -57,7 +57,7 @@ export const sendInvitationEmail = async ({ email }: EmailOptions) => {
 
 export const inviteVoter = async (email: string) => {
   const { error, data } = await adminAuthClient.inviteUserByEmail(email, {
-    redirectTo: "http://localhost:3000/",
+    redirectTo: process.env.NEXT_PUBLIC_URL,
   });
   if (error) {
     console.error("Error inviting user:", error);
@@ -78,7 +78,7 @@ export const inviteVoter = async (email: string) => {
 
 export const sendInviteToExistingUser = async (email: string) => {
   const { error, data } = await adminAuthClient.inviteUserByEmail(email, {
-    redirectTo: "http://localhost:3000/",
+    redirectTo: process.env.NEXT_PUBLIC_URL,
   });
   if (error) {
     console.error("Error inviting user:", error);

@@ -67,6 +67,11 @@ export const positionType = pgEnum("position_type", [
   "statute_change",
 ]);
 
+export const electionVoterStatus = pgEnum("election_voter_status", [
+  "active",
+  "deactivated",
+]);
+
 export const onlineStatus = pgEnum("online_status", ["online", "offline"]);
 
 export const paymentProvider = pgEnum("payment_provider", ["stripe", "vipps"]);
@@ -231,6 +236,9 @@ export const electionVoter = pgTable("election_voter", {
     .notNull()
     .references(() => profile.id, { onDelete: "cascade" }),
   vote_weight: integer("vote_weight").notNull(),
+  status: electionVoterStatus("status")
+    .notNull()
+    .$default(() => "active"),
 });
 
 export const electionVoterRelations = relations(
