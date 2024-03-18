@@ -2,7 +2,11 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import { and, desc, eq, ne, schema } from "@acme/db";
-import { inviteVoter } from "@acme/supa";
+import {
+  inviteVoter,
+  sendInvitationEmail,
+  sendInviteToExistingUser,
+} from "@acme/supa";
 
 import { adminProcedure, createTRPCRouter, protectedProcedure } from "../trpc";
 
@@ -406,6 +410,7 @@ export const electionsRouter = createTRPCRouter({
           vote_weight: true,
           electionId: true,
           profileId: true,
+          status: true,
         },
         with: {
           profile: {
@@ -450,7 +455,8 @@ export const electionsRouter = createTRPCRouter({
     .input(
       z.object({
         id: z.string(),
-        vote_weight: z.number(),
+        vote_weight: z.number().optional(),
+        status: z.enum(["active", "deactivated"]).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -458,6 +464,7 @@ export const electionsRouter = createTRPCRouter({
         .update(schema.electionVoter)
         .set({
           vote_weight: input.vote_weight,
+          status: input.status,
         })
         .where(eq(schema.electionVoter.id, input.id));
     }),
@@ -473,6 +480,7 @@ export const electionsRouter = createTRPCRouter({
         columns: {
           id: true,
           vote_weight: true,
+          status: true,
         },
       });
     }),
@@ -533,7 +541,7 @@ export const electionsRouter = createTRPCRouter({
 
         if (existingProfile) {
           profileId = existingProfile.id;
-          const { data, error } = await inviteVoter(voter.email);
+          await sendInvitationEmail({ email: voter.email });
         } else {
           const { data, error } = await inviteVoter(voter.email);
 

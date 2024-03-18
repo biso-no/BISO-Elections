@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { FileTextIcon } from "@radix-ui/react-icons";
 import {
   Document,
@@ -156,18 +156,39 @@ interface PDFResultsProps {
 }
 // Define the PDF results component
 export const PDFResults = ({ electionId, disabled }: PDFResultsProps) => {
-  const { data: electionResults } = api.elections.results.useQuery(electionId);
+  const [key, setKey] = useState(0); // Add a key state to force re-render
+  const {
+    data: electionResults,
+    isLoading,
+    refetch,
+  } = api.elections.results.useQuery(electionId);
+
+  // Function to manually refresh the data
+  const refreshData = () => {
+    refetch();
+    setKey((prevKey) => prevKey + 1); // Increment key to force re-render
+  };
+
+  if (isLoading) {
+    return <div>Loading...</div>; // Show loading state
+  }
 
   return (
     <Dialog>
       <DialogTrigger asChild disabled={disabled}>
-        <Button size="sm" variant="ghost" className="gap-2" disabled={disabled}>
-          <FileTextIcon /> Print Results
+        <Button
+          size="sm"
+          variant="ghost"
+          className="gap-2"
+          disabled={disabled}
+          onClick={refreshData}
+        >
+          <FileTextIcon /> Refresh & Print Results
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogClose asChild>
-          <PDFViewer style={{ width: "100%", minHeight: "80vh" }}>
+          <PDFViewer key={key} style={{ width: "100%", minHeight: "80vh" }}>
             <ElectionResultsPDF electionResults={electionResults} />
           </PDFViewer>
         </DialogClose>

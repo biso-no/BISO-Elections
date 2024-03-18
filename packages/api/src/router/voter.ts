@@ -7,6 +7,22 @@ import { and, desc, eq, schema } from "@acme/db";
 import { createTRPCRouter, protectedProcedure } from "../trpc";
 
 export const votersRouter = createTRPCRouter({
+  me: protectedProcedure.query(({ ctx }) => {
+    return ctx.db.query.electionVoter.findFirst({
+      where: eq(schema.electionVoter.profileId, ctx.user.id),
+      columns: {
+        status: true,
+      },
+      with: {
+        election: {
+          columns: {
+            name: true,
+            id: true,
+          },
+        },
+      },
+    });
+  }),
   all: protectedProcedure.query(({ ctx }) => {
     return ctx.db.query.electionVoter.findMany({
       where: eq(schema.electionVoter.profileId, ctx.user.id),

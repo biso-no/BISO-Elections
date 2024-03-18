@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import * as XLSX from "xlsx";
 
 import { Button } from "~/components/ui/button";
@@ -30,6 +29,12 @@ interface VoterInvitation {
   vote_weight: number;
 }
 
+interface VoterRow {
+  0: string; // name
+  1: string; // email
+  2: number; // vote_weight
+}
+
 export function InviteUsers({ electionId }: InviteUsersProps) {
   //A button that opens a dialog. In the dialog there are 3 inputs per row. Include a button to add more rows. Each row represent a user to invite.
   //When the user clicks the invite button, the users are invited and the dialog closes.
@@ -38,7 +43,6 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
   const toast = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [voters, setVoters] = useState<VoterInvitation[]>([
     { name: "", email: "", electionId: "", vote_weight: 1 },
   ]);
@@ -66,11 +70,9 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
   };
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsDragOver(false); // Set drag over state to false
   };
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsDragOver(true); // Set drag over state to true
   };
 
   const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
@@ -86,25 +88,31 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
         const workbook = XLSX.read(data, { type: "array" });
 
         const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        if (sheetName) {
+          const worksheet = workbook.Sheets[sheetName];
+          if (worksheet) {
+            // Ensure worksheet is defined before using it
+            // Now TypeScript knows worksheet is not undefined
+            const json = XLSX.utils.sheet_to_json(worksheet, {
+              header: 1,
+            }) as unknown as VoterRow[];
 
-        // Process rows, skipping the first (header) and filtering out incomplete entries
-        const newVoters = json
-          .slice(1)
-          .filter((row) => row[0] && row[1] && row[2])
-          .map((validRow) => ({
-            name: validRow[0],
-            email: validRow[1],
-            electionId: electionId,
-            vote_weight: validRow[2],
-          }));
+            const newVoters = json
+              .slice(1) // Assuming the first row is headers
+              .filter((row: VoterRow) => row[0] && row[1] && row[2]) // Ensure all required fields are present
+              .map((validRow: VoterRow) => ({
+                name: validRow[0],
+                email: validRow[1],
+                electionId: electionId, // Ensure electionId is defined somewhere in your component
+                vote_weight: validRow[2],
+              }));
 
-        // Replace existing voters with new voters from Excel file
-        setVoters(newVoters);
+            setVoters(newVoters); // Ensure setVoters is defined and can accept the array of newVoters
+          }
+        }
       };
 
-      reader.readAsArrayBuffer(file);
+      reader.readAsArrayBuffer(file as Blob); // Safe to assert 'file' as 'Blob' after checking files.length > 0
     }
   };
 
@@ -158,7 +166,8 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
           {/* Use TailwindCSS for scrollable area */}
           <div className="max-h-[400px] overflow-y-auto">
             {voters.map((voter, index) => (
-              <div key={index} className="flex space-x-4">
+              // Add margin-bottom to each row, adjust "mb-4" to increase/decrease space
+              <div key={index} className="mb-4 flex space-x-4">
                 <Input
                   placeholder="Name"
                   value={voter.name}
@@ -189,7 +198,7 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
                     setVoters((prevVoters) =>
                       prevVoters.map((v, i) =>
                         i === index
-                          ? { ...v, vote_weight: parseInt(e.target.value) } // Update property name to vote_weight
+                          ? { ...v, vote_weight: parseInt(e.target.value) || 0 } // Ensure empty input doesn't result in NaN
                           : v,
                       ),
                     )
@@ -200,6 +209,7 @@ export function InviteUsers({ electionId }: InviteUsersProps) {
             ))}
             <Button onClick={addRow}>Add row</Button>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={handleDownloadTemplate}>
               Download template
