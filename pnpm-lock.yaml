@@ -264,6 +264,9 @@ importers:
       nanoid:
         specifier: ^5.0.4
         version: 5.0.4
+      nodemailer:
+        specifier: ^6.9.12
+        version: 6.9.12
       socket.io:
         specifier: ^4.7.4
         version: 4.7.4
@@ -289,6 +292,9 @@ importers:
       '@acme/tsconfig':
         specifier: 0.1.0
         version: link:../../tooling/typescript
+      '@types/nodemailer':
+        specifier: ^6.4.14
+        version: 6.4.14
       eslint:
         specifier: ^8.53.0
         version: 8.55.0

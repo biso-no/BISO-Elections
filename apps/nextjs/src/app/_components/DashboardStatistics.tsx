@@ -6,7 +6,6 @@ import { ResponsivePie } from "@nivo/pie";
 
 import { Card, CardContent } from "~/components/ui/card";
 import { useElectionId } from "~/lib/hooks/useElectionId";
-import { api } from "~/trpc/react";
 import { AverageVoteTime } from "./average-vote-time";
 
 export function DashboardStatistics() {
@@ -22,14 +21,14 @@ export function DashboardStatistics() {
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardContent className="flex flex-col items-center gap-2">
-            <BarChart className="aspect-[4/3] h-64 w-full" />
-            <h3 className="font-semibold">Election Statistics</h3>
+            <PieChart className="aspect-[4/3] h-64 w-full" />
+            <h3 className="font-semibold">Voters Statistics</h3>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="flex flex-col items-center gap-2">
-            <PieChart className="aspect-[4/3] h-64 w-full" />
-            <h3 className="font-semibold">Voters Statistics</h3>
+            <LineChart className="aspect-[4/3] h-64 w-full" />
+            <h3 className="font-semibold">Votes Statistics</h3>
           </CardContent>
         </Card>
         <AverageVoteTime electionId={electionId} />
@@ -247,68 +246,86 @@ function LineChart(props: React.ComponentProps<"div">) {
 }
 
 function BarChart(props: React.ComponentProps<"div">) {
-  const electionId = useElectionId();
-
-  if (!electionId) {
-    return null;
-  }
-  const { data } = api.elections.votesByElection.useQuery({
-    electionId: electionId,
-  });
-
-  if (!data) {
-    return null;
-  }
-
   return (
     <div {...props}>
       <ResponsiveBar
-        data={data}
-        indexBy="candidate"
-        margin={{ top: 50, right: 110, bottom: 50, left: 60 }}
+        data={[
+          {
+            name: "A",
+            data: 111,
+          },
+          {
+            name: "B",
+            data: 157,
+          },
+          {
+            name: "C",
+            data: 129,
+          },
+          {
+            name: "D",
+            data: 187,
+          },
+          {
+            name: "E",
+            data: 119,
+          },
+          {
+            name: "F",
+            data: 22,
+          },
+          {
+            name: "G",
+            data: 101,
+          },
+          {
+            name: "H",
+            data: 83,
+          },
+        ]}
+        keys={["data"]}
+        indexBy="name"
+        margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
         padding={0.3}
         valueScale={{ type: "linear" }}
         indexScale={{ type: "band", round: true }}
         colors={{ scheme: "paired" }}
+        borderWidth={1}
+        borderColor={{
+          from: "color",
+          modifiers: [["darker", 0.2]],
+        }}
         axisTop={null}
         axisRight={null}
         axisBottom={{
           tickSize: 5,
           tickPadding: 5,
           tickRotation: 0,
-          legend: "X",
+          legend: "Name",
           legendPosition: "middle",
-          legendOffset: 32,
+          legendOffset: 45,
+          truncateTickAt: 0,
         }}
         axisLeft={{
           tickSize: 5,
           tickPadding: 5,
           tickRotation: 0,
-          legend: "Y",
+          legend: "Number",
           legendPosition: "middle",
-          legendOffset: -40,
+          legendOffset: -45,
+          truncateTickAt: 0,
+        }}
+        theme={{
+          tooltip: {
+            container: {
+              fontSize: "12px",
+            },
+          },
         }}
         labelSkipWidth={12}
         labelSkipHeight={12}
-        labelTextColor={{
-          from: "color",
-          modifiers: [["darker", 1.6]],
-        }}
-        legends={[
-          {
-            dataFrom: "keys",
-            anchor: "bottom-right",
-            direction: "column",
-            justify: false,
-            translateX: 100,
-            translateY: 0,
-            itemsSpacing: 0,
-            itemDirection: "left-to-right",
-            itemWidth: 80,
-            itemHeight: 20,
-          },
-        ]}
         role="application"
+        ariaLabel="A bar chart showing data"
       />
     </div>
   );
