@@ -153,39 +153,51 @@ export const votersRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Check if user has already voted for the session
-      const hasVoted = await ctx.db.query.electionVote.findFirst({
-        where: and(
-          eq(schema.electionVote.profileId, ctx.user.id),
-          eq(schema.electionVote.sessionId, input.sessionId),
-        ),
-      });
-
-      if (hasVoted) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "User has already voted",
+      // Start the transaction
+      await ctx.db.transaction(async (tx) => {
+        // Ensure all queries and insertions use `tx` instead of `ctx.db`
+        const hasVoted = await tx.query.electionVote.findFirst({
+          where: and(
+            eq(schema.electionVote.profileId, ctx.user.id),
+            eq(schema.electionVote.sessionId, input.sessionId),
+          ),
         });
-      }
 
-      const voter = await ctx.db.query.electionVoter.findFirst({
-        where: eq(schema.electionVoter.profileId, ctx.user.id),
-      });
+        if (hasVoted) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "User has already voted",
+          });
+        }
 
-      const vote_weight = voter?.vote_weight ?? 1;
-
-      //Insert a row for each selected candidateId
-      for (const candidateId of input.candidateIds) {
-        await ctx.db.insert(schema.electionVote).values({
-          profileId: ctx.user.id,
-          candidateId,
-          sessionId: input.sessionId,
-          weight: vote_weight,
-          createdAt: new Date(),
+        const voter = await tx.query.electionVoter.findFirst({
+          where: eq(schema.electionVoter.profileId, ctx.user.id),
         });
-      }
+
+        if (!voter) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "User is not a voter",
+          });
+        }
+
+        const vote_weight = voter?.vote_weight ?? 1;
+
+        // Use a loop to insert votes for each candidateId within the transaction
+        for (const candidateId of input.candidateIds) {
+          await tx
+            .insert(schema.electionVote)
+            .values({
+              profileId: ctx.user.id,
+              candidateId,
+              sessionId: input.sessionId,
+              weight: vote_weight,
+              createdAt: new Date(),
+            })
+            .execute();
+        }
+      });
     }),
-
   hasVoted: protectedProcedure
     .input(z.object({ sessionId: z.string() }))
     .query(async ({ ctx, input }) => {

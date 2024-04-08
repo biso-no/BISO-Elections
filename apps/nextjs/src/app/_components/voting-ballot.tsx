@@ -24,6 +24,7 @@ export function VotingBallot({
 }: VotingBallotProps) {
   const toast = useToast();
   const utils = api.useUtils();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const { data: loadedSession } = api.voter.activeSession.useQuery();
 
@@ -59,7 +60,8 @@ export function VotingBallot({
   });
 
   async function handleSubmit() {
-    if (!session) return;
+    if (!session || isSubmitting) return;
+    setIsSubmitting(true); // Disable the button
     const voteData = {
       sessionId: session.id,
       votes: selectedCandidateIds.map((id) => ({
@@ -67,10 +69,18 @@ export function VotingBallot({
       })),
     };
     console.log("voteData: ", voteData);
-    await vote({
-      sessionId: session.id,
-      candidateIds: selectedCandidateIds,
-    });
+    try {
+      await vote({
+        sessionId: session.id,
+        candidateIds: selectedCandidateIds,
+      });
+    } catch (error) {
+      console.error("Failed to submit vote: ", error);
+      // Optionally, handle error (e.g., show a toast notification)
+    } finally {
+      setIsSubmitting(false); // Re-enable the button
+      setSelectedCandidateIds([]);
+    }
   }
 
   if (hasVoted && !preview) {
@@ -167,10 +177,10 @@ export function VotingBallot({
       ))}
       <Button
         onClick={handleSubmit}
-        disabled={selectedCandidateIds.length === 0}
+        disabled={isSubmitting || selectedCandidateIds.length === 0}
         className="w-full"
       >
-        Submit
+        {isSubmitting ? "Submitting..." : "Submit"}
       </Button>
     </div>
   );
