@@ -46,6 +46,7 @@ export function AuthForm() {
   const router = useRouter();
   const { toast } = useToast();
   const [logo, setLogo] = useState("/logos/logo-light.svg");
+  const [isEnteringCode, setIsEnteringCode] = useState(false);
 
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
@@ -84,20 +85,20 @@ export function AuthForm() {
 
   const codeSubmit = async () => {
     if (email && code) {
-      await signInWithCode(email, code, type);
-
-      return;
+      try {
+        await signInWithCode(email, code, type);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     }
-
-    toast({
-      title: "Success",
-      description: "Sign in successful",
-      variant: "default",
-    });
   };
 
   //If code exists, we need to render another component instead, where the user is prompted to enter the code and sign in
-  if (code) {
+  if (code ?? isEnteringCode) {
     return (
       <Card className="max-w-sm space-y-6 rounded-lg border  p-6 shadow-lg">
         <CardHeader className="space-y-2 text-center">
@@ -241,6 +242,14 @@ export function AuthForm() {
             <span className="text-sm text-zinc-400 dark:text-zinc-300">OR</span>
             <hr className="flex-grow border-zinc-200 dark:border-zinc-700" />
           </div>
+
+          <Button
+            onClick={() => setIsEnteringCode(true)}
+            className="w-full justify-center"
+            variant="outline"
+          >
+            Sign in with code
+          </Button>
 
           <Button
             onClick={() => signInWithAzure()}
