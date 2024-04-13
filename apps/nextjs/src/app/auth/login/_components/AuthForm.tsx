@@ -85,15 +85,7 @@ export function AuthForm() {
 
   const codeSubmit = async () => {
     if (email && code) {
-      try {
-        await signInWithCode(email, code, type);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      }
+      await signInWithCode(email, code, type);
     }
   };
 
@@ -173,9 +165,22 @@ export function AuthForm() {
                   />
                 </div>
               </div>
-              <Button type="submit">Sign in</Button>
+              <Button
+                className="w-full"
+                type="submit"
+                disabled={codeForm.formState.isSubmitting}
+              >
+                Sign in
+              </Button>
             </form>
           </Form>
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() => setIsEnteringCode(false)}
+          >
+            Back
+          </Button>
         </CardContent>
       </Card>
     );
