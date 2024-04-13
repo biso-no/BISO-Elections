@@ -48,6 +48,16 @@
       .button-container {
         text-align: center;
       }
+      .token-display {
+        background-color: #e0e0e0;
+        color: #333;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        word-break: break-all;
+        text-align: center;
+        margin: 10px 0;
+      }
     </style>
   </head>
   <body>
@@ -61,6 +71,8 @@
           >Login</a
         >
       </div>
+      <p>Your login token (copy and use if the button doesn't work):</p>
+      <div class="token-display">{{ .Token }}</div>
       <div class="footer">
         For any questions or assistance, please contact kk@biso.no.
       </div>
