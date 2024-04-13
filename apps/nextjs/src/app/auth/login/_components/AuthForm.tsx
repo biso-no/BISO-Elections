@@ -84,8 +84,13 @@ export function AuthForm() {
   };
 
   const codeSubmit = async () => {
-    if (email && code) {
-      await signInWithCode(email, code, type);
+    //If code input is populated, we run the signInWithCode function
+    if (codeForm.getValues("code") && codeForm.getValues("email")) {
+      await signInWithCode(
+        codeForm.getValues("email"),
+        codeForm.getValues("code"),
+        type || "email",
+      );
     }
   };
 
